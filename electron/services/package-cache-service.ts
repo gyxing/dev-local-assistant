@@ -17,8 +17,13 @@ const COMMAND_TIMEOUT_MS = 30_000;
 interface PackageManagerDefinition {
   manager: PackageManagerName;
   label: string;
-  pathCommand: string[];
-  cleanCommand: string[];
+  pathCommand: [string, ...string[]];
+  cleanCommand: [string, ...string[]];
+}
+
+interface CommandInvocation {
+  file: string;
+  args: string[];
 }
 
 const PACKAGE_MANAGER_DEFINITIONS: PackageManagerDefinition[] = [
@@ -42,8 +47,16 @@ const PACKAGE_MANAGER_DEFINITIONS: PackageManagerDefinition[] = [
   },
 ];
 
-function resolveCommand(commandName: string) {
-  return process.platform === 'win32' ? `${commandName}.cmd` : commandName;
+function createCommandInvocation([commandName, ...args]: [string, ...string[]]): CommandInvocation {
+  if (process.platform === 'win32') {
+    // Windows 的 .cmd 文件不能由 execFile 直接启动，需要通过系统命令解释器执行。
+    return {
+      file: process.env.ComSpec || 'cmd.exe',
+      args: ['/d', '/s', '/c', `${commandName}.cmd`, ...args],
+    };
+  }
+
+  return { file: commandName, args };
 }
 
 function normalizeCommandOutput(output: string) {
@@ -84,8 +97,8 @@ export class PackageCacheService {
     }
 
     try {
-      const [commandName, ...args] = definition.cleanCommand;
-      const { stdout, stderr } = await execFileAsync(resolveCommand(commandName), args, {
+      const invocation = createCommandInvocation(definition.cleanCommand);
+      const { stdout, stderr } = await execFileAsync(invocation.file, invocation.args, {
         timeout: COMMAND_TIMEOUT_MS,
         windowsHide: true,
       });
@@ -113,8 +126,8 @@ export class PackageCacheService {
 
   private async scanCache(definition: PackageManagerDefinition): Promise<PackageCacheItem> {
     try {
-      const [commandName, ...args] = definition.pathCommand;
-      const { stdout } = await execFileAsync(resolveCommand(commandName), args, {
+      const invocation = createCommandInvocation(definition.pathCommand);
+      const { stdout } = await execFileAsync(invocation.file, invocation.args, {
         timeout: COMMAND_TIMEOUT_MS,
         windowsHide: true,
       });
