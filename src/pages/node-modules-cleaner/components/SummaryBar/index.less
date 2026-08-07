@@ -1,0 +1,71 @@
+.summary-bar {
+  display: flex;
+  flex: 2 1 460px;
+  align-items: center;
+  gap: 6px;
+  min-width: 360px;
+  padding: 0;
+  margin-bottom: 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+.summary-bar__metric {
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: baseline;
+  gap: 5px;
+  min-width: 78px;
+  padding: 2px 4px;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+
+.summary-bar__metric--wide {
+  min-width: 132px;
+}
+
+.summary-bar__label {
+  color: var(--cleaner-text-muted) !important;
+  font-size: 12px;
+}
+
+.summary-bar__value {
+  color: var(--cleaner-text-strong);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.summary-bar__progress-wrap {
+  display: flex;
+  flex: 1 1 180px;
+  align-items: center;
+  gap: 6px;
+  min-width: 190px;
+  padding: 2px 4px;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+
+.summary-bar__progress {
+  flex: 1;
+  min-width: 140px;
+}
+
+.summary-bar__progress .ant-progress-bg {
+  background: var(--cleaner-primary) !important;
+}
+
+@media (max-width: 760px) {
+  .summary-bar {
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+
+  .summary-bar__progress-wrap {
+    flex-basis: 100%;
+  }
+}

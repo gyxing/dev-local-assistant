@@ -1,0 +1,65 @@
+.cleaner-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0;
+  margin-bottom: 4px;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+.cleaner-toolbar__path {
+  flex: 1;
+  min-width: 0;
+  height: 28px;
+  padding: 3px 8px;
+  overflow: hidden;
+  color: #344054;
+  font-family: Consolas, 'Liberation Mono', monospace;
+  font-size: 12px;
+  line-height: 20px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: var(--cleaner-surface-soft);
+  border: 1px solid var(--cleaner-border-soft);
+  border-radius: 6px;
+}
+
+.cleaner-toolbar__history {
+  width: 190px;
+}
+
+.cleaner-toolbar .ant-btn {
+  height: 28px;
+  padding-inline: 9px;
+}
+
+.cleaner-toolbar .ant-select-selector {
+  min-height: 28px !important;
+  background: var(--cleaner-surface-soft) !important;
+  border-color: var(--cleaner-border-soft) !important;
+  border-radius: 6px !important;
+}
+
+.cleaner-toolbar .ant-select:not(.ant-select-disabled):hover .ant-select-selector {
+  border-color: var(--cleaner-primary) !important;
+}
+
+.cleaner-toolbar .ant-select-selection-placeholder,
+.cleaner-toolbar .ant-select-selection-item {
+  line-height: 26px !important;
+}
+
+@media (max-width: 980px) {
+  .cleaner-toolbar__path {
+    flex-basis: 100%;
+    order: 10;
+  }
+
+  .cleaner-toolbar__history {
+    flex: 1;
+    min-width: 180px;
+  }
+}

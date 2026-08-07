@@ -1,0 +1,56 @@
+.delete-task-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 6px;
+  background: var(--cleaner-surface-soft);
+  border: 0;
+  border-radius: 6px;
+}
+
+.delete-task-footer__info {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  gap: 8px;
+  min-width: 0;
+}
+
+.delete-task-footer__status {
+  flex-shrink: 0;
+}
+
+.delete-task-footer__progress {
+  flex: 1;
+  min-width: 120px;
+  max-width: 260px;
+}
+
+.delete-task-footer .ant-typography {
+  font-size: 12px;
+}
+
+.delete-task-footer .ant-btn {
+  height: 26px;
+  padding-inline: 8px;
+  font-size: 12px;
+}
+
+@media (max-width: 860px) {
+  .delete-task-footer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .delete-task-footer__info {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .delete-task-footer__progress {
+    width: 100%;
+    max-width: none;
+  }
+}

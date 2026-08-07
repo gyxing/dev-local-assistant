@@ -1,0 +1,9 @@
+node_modules
+dist
+dist-electron
+.umi
+.umi-production
+.superpowers
+npm-debug.log*
+.idea
+/docs

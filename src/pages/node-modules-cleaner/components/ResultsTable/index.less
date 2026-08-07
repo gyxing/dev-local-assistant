@@ -1,0 +1,78 @@
+.results-table {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--cleaner-surface);
+  border: 0;
+  border-radius: 6px;
+  box-shadow: var(--cleaner-shadow-subtle);
+}
+
+.results-table .ant-spin-nested-loading,
+.results-table .ant-spin-container,
+.results-table .ant-table,
+.results-table .ant-table-container {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.results-table .ant-table-body {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.results-table .ant-table {
+  color: var(--cleaner-text);
+  font-size: 13px;
+}
+
+.results-table .ant-table-thead > tr > th {
+  padding: 7px 9px !important;
+  color: #475467;
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--cleaner-table-head) !important;
+  border-bottom-color: var(--cleaner-border) !important;
+}
+
+.results-table .ant-table-tbody > tr > td {
+  padding: 6px 9px !important;
+  border-bottom-color: var(--cleaner-border-soft) !important;
+}
+
+.results-table .ant-table-tbody > tr:hover > td {
+  background: var(--cleaner-hover) !important;
+}
+
+.results-table .ant-tag {
+  margin-inline-end: 0;
+  border-radius: 5px;
+}
+
+.results-table .ant-btn-link {
+  height: 24px;
+  padding-inline: 4px;
+}
+
+.results-table .ant-pagination {
+  margin: 6px 8px !important;
+}
+
+.results-table .ant-pagination-total-text {
+  color: var(--cleaner-text-muted);
+  font-size: 12px;
+}
+
+.results-table .ant-checkbox-checked .ant-checkbox-inner {
+  background-color: var(--cleaner-primary);
+  border-color: var(--cleaner-primary);
+}
+
+.results-table .ant-checkbox-wrapper:hover .ant-checkbox-inner,
+.results-table .ant-checkbox:hover .ant-checkbox-inner {
+  border-color: var(--cleaner-primary);
+}
