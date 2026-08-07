@@ -24,11 +24,13 @@ export interface PortUsageItem {
   id: string;
   protocol: string;
   localAddress: string;
+  remoteAddress?: string;
   localPort: number;
   state?: string;
   pid: number;
   processName?: string;
   processPath?: string;
+  commandLine?: string;
 }
 
 export interface KillProcessResult {

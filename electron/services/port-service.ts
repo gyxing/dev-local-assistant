@@ -17,6 +17,7 @@ const PROTECTED_PROCESS_NAMES = new Set([
 interface ProcessInfo {
   name?: string;
   path?: string;
+  commandLine?: string;
 }
 
 function getAddressPort(address: string) {
@@ -28,13 +29,14 @@ function getAddressPort(address: string) {
 }
 
 function createPortUsageId(item: Omit<PortUsageItem, 'id'>) {
-  return `${item.protocol}-${item.localAddress}-${item.localPort}-${item.pid}-${item.state ?? 'none'}`;
+  // TCP 连接需要包含远程端点，否则同一端口的多条连接会产生重复行键。
+  return `${item.protocol}-${item.localAddress}-${item.remoteAddress ?? 'none'}-${item.localPort}-${item.pid}-${item.state ?? 'none'}`;
 }
 
 function parseNetstatOutput(output: string, filterPorts?: number[]) {
   const targetPorts = filterPorts?.length ? new Set(filterPorts) : undefined;
   const lines = output.split(/\r?\n/);
-  const items: Array<Omit<PortUsageItem, 'id' | 'processName' | 'processPath'>> = [];
+  const items: Array<Omit<PortUsageItem, 'id' | 'processName' | 'processPath' | 'commandLine'>> = [];
 
   for (const line of lines) {
     const trimmedLine = line.trim();
@@ -45,6 +47,7 @@ function parseNetstatOutput(output: string, filterPorts?: number[]) {
     const parts = trimmedLine.split(/\s+/);
     const protocol = parts[0]?.toUpperCase();
     const localAddress = parts[1];
+    const remoteAddress = parts[2];
     const localPort = getAddressPort(localAddress);
 
     if (!protocol || !localAddress || !localPort) {
@@ -65,6 +68,7 @@ function parseNetstatOutput(output: string, filterPorts?: number[]) {
     items.push({
       protocol,
       localAddress,
+      remoteAddress,
       localPort,
       state: isTcp ? parts[3] : undefined,
       pid,
@@ -97,10 +101,11 @@ function parsePowerShellProcessOutput(output: string): ProcessInfo {
   }
 
   try {
-    const data = JSON.parse(output) as { Name?: string; ExecutablePath?: string };
+    const data = JSON.parse(output) as { Name?: string; ExecutablePath?: string; CommandLine?: string };
     return {
       name: data.Name,
       path: data.ExecutablePath,
+      commandLine: data.CommandLine,
     };
   } catch {
     return {};
@@ -124,6 +129,7 @@ export class PortService {
         id: createPortUsageId(item),
         processName: processInfo?.name,
         processPath: processInfo?.path,
+        commandLine: processInfo?.commandLine,
       };
     });
   }
@@ -176,7 +182,8 @@ export class PortService {
         [
           '-NoProfile',
           '-Command',
-          `Get-CimInstance Win32_Process -Filter "ProcessId = ${pid}" | Select-Object -First 1 Name,ExecutablePath | ConvertTo-Json -Compress`,
+          // 脚本型运行时需要完整启动命令，才能从 node.exe、java.exe 定位到具体项目。
+          `Get-CimInstance Win32_Process -Filter "ProcessId = ${pid}" | Select-Object -First 1 Name,ExecutablePath,CommandLine | ConvertTo-Json -Compress`,
         ],
         { timeout: COMMAND_TIMEOUT_MS, windowsHide: true },
       );

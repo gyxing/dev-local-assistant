@@ -1,13 +1,95 @@
 import { useState } from 'react';
 import { Button, Input, Modal, Space, Table, Tag, Typography, message } from 'antd';
 import { CopyOutlined, DeleteOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
+import type { ReactNode } from 'react';
 import type { TableColumnsType } from 'antd';
 import type { PortUsageItem } from '../../../../../shared/developer-tools-types';
+import { groupPortUsages } from './port-usage-group';
+import type { PortUsageGroup } from './port-usage-group';
 import './index.less';
 
 const { Text } = Typography;
 
 const COMMON_PORTS = [3000, 5173, 8000, 8080, 8137, 8138];
+
+const DETAIL_COLUMNS: TableColumnsType<PortUsageItem> = [
+  {
+    title: '本地地址',
+    dataIndex: 'localAddress',
+    ellipsis: true,
+  },
+  {
+    title: '远程地址',
+    dataIndex: 'remoteAddress',
+    ellipsis: true,
+    render: (value?: string) => value || '-',
+  },
+  {
+    title: '状态',
+    dataIndex: 'state',
+    width: 140,
+    render: (value?: string) => value || '-',
+  },
+];
+
+function getLocalAddressSummary(group: PortUsageGroup): string {
+  if (group.items.length === 1) {
+    return group.items[0].localAddress;
+  }
+
+  return group.listeningCount > 0
+    ? `${group.listeningCount} 个监听地址`
+    : `${group.localAddressCount} 个本地地址`;
+}
+
+function renderStateSummary(group: PortUsageGroup): ReactNode {
+  return (
+    <Space size={[4, 4]} wrap>
+      {group.listeningCount > 0 ? <Tag color="green">监听 {group.listeningCount}</Tag> : null}
+      {group.establishedCount > 0 ? <Tag color="blue">连接 {group.establishedCount}</Tag> : null}
+      {group.otherStateCount > 0 ? <Tag>占用 {group.otherStateCount}</Tag> : null}
+    </Space>
+  );
+}
+
+function renderApplicationInfo(group: PortUsageGroup): ReactNode {
+  const processName = group.processName || '未知进程';
+  // 启动命令不可用时回退到可执行文件路径，保证应用信息仍可用于定位进程。
+  const applicationCommand = group.commandLine || group.processPath || '-';
+
+  return (
+    <div className="port-manager__application">
+      <div className="port-manager__application-heading">
+        <Text strong className="port-manager__application-name" ellipsis={{ tooltip: processName }}>
+          {processName}
+        </Text>
+        <Text type="secondary" className="port-manager__application-pid">
+          PID {group.pid}
+        </Text>
+      </div>
+      <Text
+        type="secondary"
+        className="port-manager__application-command"
+        ellipsis={{ tooltip: applicationCommand }}
+      >
+        {applicationCommand}
+      </Text>
+    </div>
+  );
+}
+
+function renderPortUsageDetails(group: PortUsageGroup): ReactNode {
+  return (
+    <Table<PortUsageItem>
+      className="port-manager__details-table"
+      rowKey="id"
+      columns={DETAIL_COLUMNS}
+      dataSource={group.items}
+      size="small"
+      pagination={false}
+    />
+  );
+}
 
 /**
  * 端口占用管理器，帮助开发者定位并结束本地开发端口对应进程。
@@ -55,7 +137,7 @@ export default function PortManager() {
     }
   }
 
-  function confirmKillProcess(item: PortUsageItem) {
+  function confirmKillProcess(item: PortUsageGroup) {
     Modal.confirm({
       title: `确认结束进程 ${item.pid}`,
       content: `端口 ${item.localPort} 当前由 ${item.processName || '未知进程'} 占用。结束进程可能中断正在运行的服务。`,
@@ -88,51 +170,41 @@ export default function PortManager() {
     }
   }
 
-  const columns: TableColumnsType<PortUsageItem> = [
+  const groupedItems = groupPortUsages(items);
+
+  const columns: TableColumnsType<PortUsageGroup> = [
     {
       title: '端口',
       dataIndex: 'localPort',
-      width: 90,
+      width: 80,
+      rowScope: 'row',
       render: (value: number) => <Tag color="blue">{value}</Tag>,
     },
     {
       title: '协议',
       dataIndex: 'protocol',
-      width: 80,
+      width: 64,
+      responsive: ['sm'],
     },
     {
       title: '本地地址',
-      dataIndex: 'localAddress',
-      width: 180,
+      width: 150,
       ellipsis: true,
+      responsive: ['md'],
+      render: (_, group) => getLocalAddressSummary(group),
     },
     {
       title: '状态',
-      dataIndex: 'state',
-      width: 120,
-      render: (value?: string) => value || '-',
+      width: 150,
+      render: (_, group) => renderStateSummary(group),
     },
     {
-      title: 'PID',
-      dataIndex: 'pid',
-      width: 100,
-    },
-    {
-      title: '进程',
-      dataIndex: 'processName',
-      width: 140,
-      ellipsis: true,
-      render: (value?: string) => value || '-',
-    },
-    {
-      title: '进程路径',
-      dataIndex: 'processPath',
-      ellipsis: true,
-      render: (value?: string) => value || '-',
+      title: '应用信息',
+      render: (_, group) => renderApplicationInfo(group),
     },
     {
       title: '操作',
-      width: 180,
+      width: 170,
       render: (_, item) => (
         <Space size={6}>
           <Button size="small" icon={<CopyOutlined />} onClick={() => copyPid(item.pid)}>
@@ -165,6 +237,7 @@ export default function PortManager() {
           <Input
             className="port-manager__input"
             value={portText}
+            aria-label="端口号"
             placeholder="端口号"
             onChange={(event) => setPortText(event.target.value)}
             onPressEnter={handleSearchPort}
@@ -191,14 +264,20 @@ export default function PortManager() {
         ))}
       </div>
 
-      <Table<PortUsageItem>
+      <Table<PortUsageGroup>
         className="port-manager__table"
         rowKey="id"
         columns={columns}
-        dataSource={items}
+        dataSource={groupedItems}
         loading={loading}
         size="small"
+        tableLayout="fixed"
         pagination={{ pageSize: 50, showSizeChanger: false }}
+        expandable={{
+          columnWidth: 40,
+          expandedRowRender: renderPortUsageDetails,
+          rowExpandable: (group) => group.items.length > 1,
+        }}
       />
     </section>
   );
