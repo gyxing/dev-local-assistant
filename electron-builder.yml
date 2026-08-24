@@ -1,0 +1,31 @@
+appId: com.devlocalassistant.app
+productName: 开发者本地助手
+asar: true
+
+directories:
+  output: release
+
+files:
+  - dist/**/*
+  - dist-electron/**/*
+  - package.json
+
+extraResources:
+  - from: electron/resources/hosts-helper.ps1
+    to: hosts-helper.ps1
+
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+
+nsis:
+  oneClick: true
+  perMachine: false
+  createDesktopShortcut: always
+  createStartMenuShortcut: true
+  shortcutName: 开发者本地助手
+  runAfterFinish: true
+
+artifactName: ${productName}-Setup-${version}.${ext}

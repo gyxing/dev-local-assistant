@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import type { PackageManagerName } from '../shared/developer-tools-types';
+import type { PackageManagerName, PortUsageQuery } from '../shared/developer-tools-types';
+import type { HostsSaveRequest } from '../shared/network-tools-types';
 import type {
   DeleteMode,
   DirectoryHistoryItem,
@@ -40,6 +41,12 @@ contextBridge.exposeInMainWorld('developerAssistant', {
     ipcRenderer.invoke(IPC_CHANNELS.cleanPackageCache, manager),
   openPackageCacheDirectory: (cachePath: string) =>
     ipcRenderer.invoke(IPC_CHANNELS.openPackageCacheDirectory, cachePath),
-  listPortUsages: (ports?: number[]) => ipcRenderer.invoke(IPC_CHANNELS.listPortUsages, ports),
+  listPortUsages: (query: PortUsageQuery) => ipcRenderer.invoke(IPC_CHANNELS.listPortUsages, query),
   killPortProcess: (pid: number) => ipcRenderer.invoke(IPC_CHANNELS.killPortProcess, pid),
+  getHostsDocument: () => ipcRenderer.invoke(IPC_CHANNELS.getHostsDocument),
+  saveHosts: (request: HostsSaveRequest) => ipcRenderer.invoke(IPC_CHANNELS.saveHosts, request),
+  listHostsBackups: () => ipcRenderer.invoke(IPC_CHANNELS.listHostsBackups),
+  restoreHostsBackup: (backupId: string, sourceHash: string) =>
+    ipcRenderer.invoke(IPC_CHANNELS.restoreHostsBackup, backupId, sourceHash),
+  flushDns: () => ipcRenderer.invoke(IPC_CHANNELS.flushDns),
 });

@@ -1,9 +1,14 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import type { KillProcessResult, PortUsageItem } from '../../shared/developer-tools-types';
+import type {
+  KillProcessResult,
+  PortUsageItem,
+  PortUsageQuery,
+} from '../../shared/developer-tools-types';
 
 const execFileAsync = promisify(execFile);
 const COMMAND_TIMEOUT_MS = 20_000;
+const LISTENING_STATE = 'LISTENING';
 const PROTECTED_PROCESS_NAMES = new Set([
   'system',
   'registry',
@@ -33,8 +38,8 @@ function createPortUsageId(item: Omit<PortUsageItem, 'id'>) {
   return `${item.protocol}-${item.localAddress}-${item.remoteAddress ?? 'none'}-${item.localPort}-${item.pid}-${item.state ?? 'none'}`;
 }
 
-function parseNetstatOutput(output: string, filterPorts?: number[]) {
-  const targetPorts = filterPorts?.length ? new Set(filterPorts) : undefined;
+function parseNetstatOutput(output: string, query: PortUsageQuery) {
+  const targetPorts = query.ports?.length ? new Set(query.ports) : undefined;
   const lines = output.split(/\r?\n/);
   const items: Array<Omit<PortUsageItem, 'id' | 'processName' | 'processPath' | 'commandLine'>> = [];
 
@@ -59,6 +64,12 @@ function parseNetstatOutput(output: string, filterPorts?: number[]) {
     }
 
     const isTcp = protocol === 'TCP';
+    const state = isTcp ? parts[3]?.toUpperCase() : undefined;
+    // 监听范围只保留 TCP 监听记录；UDP 没有连接状态，需要全部保留。
+    if (query.scope === 'listening' && isTcp && state !== LISTENING_STATE) {
+      continue;
+    }
+
     const pidText = isTcp ? parts[4] : parts[3];
     const pid = Number(pidText);
     if (!Number.isFinite(pid)) {
@@ -70,7 +81,7 @@ function parseNetstatOutput(output: string, filterPorts?: number[]) {
       localAddress,
       remoteAddress,
       localPort,
-      state: isTcp ? parts[3] : undefined,
+      state,
       pid,
     });
   }
@@ -113,13 +124,13 @@ function parsePowerShellProcessOutput(output: string): ProcessInfo {
 }
 
 export class PortService {
-  async listPortUsages(ports?: number[]): Promise<PortUsageItem[]> {
+  async listPortUsages(query: PortUsageQuery): Promise<PortUsageItem[]> {
     const args = process.platform === 'win32' ? ['-ano'] : ['-an'];
     const { stdout } = await execFileAsync('netstat', args, {
       timeout: COMMAND_TIMEOUT_MS,
       windowsHide: true,
     });
-    const items = parseNetstatOutput(stdout, ports);
+    const items = parseNetstatOutput(stdout, query);
     const processInfoMap = await this.getProcessInfoMap([...new Set(items.map((item) => item.pid))]);
 
     return items.map((item) => {

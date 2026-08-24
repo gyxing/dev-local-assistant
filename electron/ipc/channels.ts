@@ -17,5 +17,10 @@ export const IPC_CHANNELS = {
   openPackageCacheDirectory: 'package-cache:open-directory',
   listPortUsages: 'port:list-usages',
   killPortProcess: 'port:kill-process',
+  getHostsDocument: 'hosts:get-document',
+  saveHosts: 'hosts:save',
+  listHostsBackups: 'hosts:list-backups',
+  restoreHostsBackup: 'hosts:restore-backup',
+  flushDns: 'dns:flush',
   taskEvent: 'task:event',
 } as const;

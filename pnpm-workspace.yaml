@@ -1,0 +1,7 @@
+allowBuilds:
+  core-js: true
+  core-js-pure: true
+  # 当前仅生成 NSIS，拒绝无关的 Squirrel 7-Zip 选择脚本。
+  electron-winstaller: false
+  es5-ext: true
+  esbuild: true

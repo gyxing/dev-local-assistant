@@ -1,6 +1,8 @@
 {
   "name": "dev-local-assistant",
+  "productName": "开发者本地助手",
   "version": "0.1.0",
+  "description": "面向开发者的本地效率工具集",
   "private": true,
   "main": "dist-electron/electron/main.js",
   "scripts": {
@@ -9,22 +11,22 @@
     "build:web": "set PATH=D:\\nodejs\\22.21.1;%PATH%&& max build",
     "build:electron": "set PATH=D:\\nodejs\\22.21.1;%PATH%&& tsc -p tsconfig.electron.json",
     "dev:electron": "set PATH=D:\\nodejs\\22.21.1;%PATH%&& tsc -p tsconfig.electron.json && cross-env NODE_ENV=development DEV_SERVER_URL=http://127.0.0.1:8137 electron .",
-    "build": "set PATH=D:\\nodejs\\22.21.1;%PATH%&& max build && tsc -p tsconfig.electron.json"
-  },
-  "dependencies": {
-    "@ant-design/icons": "^5.6.1",
-    "@umijs/max": "^4.6.68",
-    "antd": "^5.29.3",
-    "electron": "^42.5.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "build": "set PATH=D:\\nodejs\\22.21.1;%PATH%&& max build && tsc -p tsconfig.electron.json",
+    "package:win": "pnpm run build && electron-builder --win nsis --x64"
   },
   "devDependencies": {
+    "@ant-design/icons": "^5.6.1",
+    "@umijs/max": "^4.6.68",
     "@types/node": "^20.19.43",
     "@types/react": "^18.3.31",
     "@types/react-dom": "^18.3.7",
+    "antd": "^5.29.3",
     "concurrently": "^9.2.3",
     "cross-env": "^7.0.0",
+    "electron": "^42.5.0",
+    "electron-builder": "^26.15.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "typescript": "^5.9.3",
     "wait-on": "^8.0.5"
   }

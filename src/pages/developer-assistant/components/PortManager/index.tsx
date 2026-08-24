@@ -3,14 +3,35 @@ import { Button, Input, Modal, Space, Table, Tag, Typography, message } from 'an
 import { CopyOutlined, DeleteOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
 import type { ReactNode } from 'react';
 import type { TableColumnsType } from 'antd';
-import type { PortUsageItem } from '../../../../../shared/developer-tools-types';
+import type {
+  PortUsageItem,
+  PortUsageQuery,
+} from '../../../../../shared/developer-tools-types';
 import { groupPortUsages } from './port-usage-group';
 import type { PortUsageGroup } from './port-usage-group';
 import './index.less';
 
 const { Text } = Typography;
 
-const COMMON_PORTS = [3000, 5173, 8000, 8080, 8137, 8138];
+// 覆盖常见开发服务器、数据库、中间件及本项目调试端口。
+const COMMON_PORTS = [
+  3000,
+  3001,
+  3306,
+  4200,
+  5000,
+  5173,
+  5174,
+  5432,
+  6379,
+  8000,
+  8080,
+  8081,
+  8137,
+  8138,
+  8888,
+  27017,
+];
 
 const DETAIL_COLUMNS: TableColumnsType<PortUsageItem> = [
   {
@@ -99,9 +120,13 @@ export default function PortManager() {
   const [items, setItems] = useState<PortUsageItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [killingPid, setKillingPid] = useState<number>();
+  const [lastQuery, setLastQuery] = useState<PortUsageQuery>({
+    ports: COMMON_PORTS,
+    scope: 'all',
+  });
   const apiAvailable = Boolean(window.developerAssistant);
 
-  async function listPortUsages(ports?: number[]) {
+  async function listPortUsages(query: PortUsageQuery) {
     const api = window.developerAssistant;
     if (!api) {
       message.error('当前页面未连接 Electron 能力');
@@ -110,7 +135,9 @@ export default function PortManager() {
 
     setLoading(true);
     try {
-      setItems(await api.listPortUsages(ports));
+      const nextItems = await api.listPortUsages(query);
+      setItems(nextItems);
+      setLastQuery(query);
     } catch (error: unknown) {
       message.error(error instanceof Error ? error.message : '查询端口占用失败');
     } finally {
@@ -119,13 +146,19 @@ export default function PortManager() {
   }
 
   function handleSearchPort() {
-    const port = Number(portText.trim());
+    const normalizedPortText = portText.trim();
+    if (!normalizedPortText) {
+      void listPortUsages({ scope: 'listening' });
+      return;
+    }
+
+    const port = Number(normalizedPortText);
     if (!Number.isInteger(port) || port <= 0 || port > 65535) {
       message.warning('请输入 1-65535 之间的端口号');
       return;
     }
 
-    void listPortUsages([port]);
+    void listPortUsages({ ports: [port], scope: 'all' });
   }
 
   async function copyPid(pid: number) {
@@ -160,7 +193,7 @@ export default function PortManager() {
       const result = await api.killPortProcess(pid);
       if (result.success) {
         message.success(result.message);
-        await listPortUsages(items.map((item) => item.localPort));
+        await listPortUsages(lastQuery);
         return;
       }
 
@@ -237,19 +270,25 @@ export default function PortManager() {
           <Input
             className="port-manager__input"
             value={portText}
-            aria-label="端口号"
-            placeholder="端口号"
+            aria-label="端口号，留空查询全部"
+            placeholder="端口号，留空查询全部"
+            disabled={loading}
             onChange={(event) => setPortText(event.target.value)}
             onPressEnter={handleSearchPort}
           />
-          <Button icon={<SearchOutlined />} disabled={!apiAvailable} onClick={handleSearchPort}>
+          <Button
+            icon={<SearchOutlined />}
+            loading={loading}
+            disabled={!apiAvailable}
+            onClick={handleSearchPort}
+          >
             查询端口
           </Button>
           <Button
             icon={<ReloadOutlined />}
             loading={loading}
             disabled={!apiAvailable}
-            onClick={() => listPortUsages(COMMON_PORTS)}
+            onClick={() => listPortUsages({ ports: COMMON_PORTS, scope: 'all' })}
           >
             扫描常用端口
           </Button>
@@ -258,7 +297,12 @@ export default function PortManager() {
 
       <div className="port-manager__quick-ports">
         {COMMON_PORTS.map((port) => (
-          <Button key={port} size="small" disabled={!apiAvailable} onClick={() => listPortUsages([port])}>
+          <Button
+            key={port}
+            size="small"
+            disabled={!apiAvailable || loading}
+            onClick={() => listPortUsages({ ports: [port], scope: 'all' })}
+          >
             {port}
           </Button>
         ))}
@@ -272,7 +316,8 @@ export default function PortManager() {
         loading={loading}
         size="small"
         tableLayout="fixed"
-        pagination={{ pageSize: 50, showSizeChanger: false }}
+        scroll={{ y: '100%' }}
+        pagination={false}
         expandable={{
           columnWidth: 40,
           expandedRowRender: renderPortUsageDetails,

@@ -4,7 +4,15 @@ import type {
   PackageCacheItem,
   PackageManagerName,
   PortUsageItem,
+  PortUsageQuery,
 } from '../../shared/developer-tools-types';
+import type {
+  DnsFlushResult,
+  HostsBackupItem,
+  HostsDocument,
+  HostsMutationResult,
+  HostsSaveRequest,
+} from '../../shared/network-tools-types';
 import type {
   AppConfig,
   DeleteMode,
@@ -35,8 +43,13 @@ export interface DeveloperAssistantApi {
   scanPackageCaches: () => Promise<PackageCacheItem[]>;
   cleanPackageCache: (manager: PackageManagerName) => Promise<PackageCacheCleanResult>;
   openPackageCacheDirectory: (cachePath: string) => Promise<string>;
-  listPortUsages: (ports?: number[]) => Promise<PortUsageItem[]>;
+  listPortUsages: (query: PortUsageQuery) => Promise<PortUsageItem[]>;
   killPortProcess: (pid: number) => Promise<KillProcessResult>;
+  getHostsDocument: () => Promise<HostsDocument>;
+  saveHosts: (request: HostsSaveRequest) => Promise<HostsMutationResult>;
+  listHostsBackups: () => Promise<HostsBackupItem[]>;
+  restoreHostsBackup: (backupId: string, sourceHash: string) => Promise<HostsMutationResult>;
+  flushDns: () => Promise<DnsFlushResult>;
 }
 
 declare global {

@@ -20,6 +20,12 @@ export interface PackageCacheCleanResult {
   output?: string;
 }
 
+/** 端口查询条件，用于明确区分指定端口查询与全部监听端口查询。 */
+export interface PortUsageQuery {
+  ports?: number[];
+  scope: 'all' | 'listening';
+}
+
 export interface PortUsageItem {
   id: string;
   protocol: string;

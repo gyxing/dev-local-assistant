@@ -3,11 +3,15 @@ import { app, BrowserWindow, dialog, ipcMain } from 'electron';
 import { IPC_CHANNELS } from './ipc/channels';
 import { ConfigService } from './services/config-service';
 import { DeleteService } from './services/delete-service';
+import { DnsService } from './services/dns-service';
+import { ElevationService } from './services/elevation-service';
+import { HostsService } from './services/hosts-service';
 import { PackageCacheService } from './services/package-cache-service';
 import { PortService } from './services/port-service';
 import { ScanService } from './services/scan-service';
 import { calculateDirectorySize } from './services/size-service';
-import type { PackageManagerName } from '../shared/developer-tools-types';
+import type { PackageManagerName, PortUsageQuery } from '../shared/developer-tools-types';
+import type { HostsSaveRequest } from '../shared/network-tools-types';
 import type {
   DeleteMode,
   DirectoryHistoryItem,
@@ -19,6 +23,8 @@ import type {
 
 let mainWindow: BrowserWindow | undefined;
 let configService: ConfigService;
+let dnsService: DnsService;
+let hostsService: HostsService;
 const scanService = new ScanService();
 const deleteService = new DeleteService();
 const packageCacheService = new PackageCacheService();
@@ -31,6 +37,12 @@ function getPreloadPath() {
 
 function getRendererEntry() {
   return path.join(__dirname, '../../dist/index.html');
+}
+
+function getHostsHelperPath() {
+  return app.isPackaged
+    ? path.join(process.resourcesPath, 'hosts-helper.ps1')
+    : path.join(app.getAppPath(), 'electron', 'resources', 'hosts-helper.ps1');
 }
 
 function createWindow() {
@@ -306,13 +318,33 @@ function registerDeveloperToolsHandlers() {
     packageCacheService.openCacheDirectory(cachePath),
   );
 
-  ipcMain.handle(IPC_CHANNELS.listPortUsages, async (_, ports?: number[]) => portService.listPortUsages(ports));
+  ipcMain.handle(IPC_CHANNELS.listPortUsages, async (_, query: PortUsageQuery) =>
+    portService.listPortUsages(query),
+  );
 
   ipcMain.handle(IPC_CHANNELS.killPortProcess, async (_, pid: number) => portService.killProcess(pid));
+
+  ipcMain.handle(IPC_CHANNELS.getHostsDocument, async () => hostsService.getDocument());
+
+  ipcMain.handle(IPC_CHANNELS.saveHosts, async (_, request: HostsSaveRequest) =>
+    hostsService.save(request),
+  );
+
+  ipcMain.handle(IPC_CHANNELS.listHostsBackups, async () => hostsService.listBackups());
+
+  ipcMain.handle(
+    IPC_CHANNELS.restoreHostsBackup,
+    async (_, backupId: string, sourceHash: string) => hostsService.restore(backupId, sourceHash),
+  );
+
+  ipcMain.handle(IPC_CHANNELS.flushDns, async () => dnsService.flush());
 }
 
 app.whenReady().then(() => {
   configService = new ConfigService(app.getPath('userData'));
+  const elevationService = new ElevationService(getHostsHelperPath());
+  dnsService = new DnsService(elevationService);
+  hostsService = new HostsService(app.getPath('userData'), elevationService, dnsService);
   registerDialogHandlers();
   registerConfigHandlers();
   registerScanHandlers();
