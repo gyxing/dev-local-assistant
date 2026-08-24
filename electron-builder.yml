@@ -28,4 +28,4 @@ nsis:
   shortcutName: 开发者本地助手
   runAfterFinish: true
 
-artifactName: ${productName}-Setup-${version}.${ext}
+artifactName: dev-local-assistant-setup-${version}.${ext}

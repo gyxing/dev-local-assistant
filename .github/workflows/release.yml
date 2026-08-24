@@ -1,0 +1,109 @@
+name: 发布 Windows 安装包
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 已存在的版本标签，例如 v0.1.1
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  release-windows:
+    name: 编译并发布 Windows 安装包
+    runs-on: windows-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+
+    steps:
+      - name: 检出版本代码
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+          fetch-depth: 0
+
+      - name: 安装 Node.js 与 pnpm
+        uses: pnpm/setup@v1
+        with:
+          version: 11.10.0
+          runtime: node@22
+          cache: true
+          install: false
+
+      - name: 安装项目依赖
+        run: pnpm install --frozen-lockfile
+
+      - name: 校验标签与项目版本
+        shell: pwsh
+        run: |
+          $packageVersion = node -p "require('./package.json').version"
+          $expectedTag = "v$packageVersion"
+
+          if ($env:RELEASE_TAG -ne $expectedTag) {
+            throw "发布标签 $env:RELEASE_TAG 与项目版本 $packageVersion 不一致，应为 $expectedTag"
+          }
+
+      - name: 编译并打包 Windows 安装程序
+        run: pnpm run package:win
+
+      - name: 校验发布文件
+        id: assets
+        shell: pwsh
+        run: |
+          $version = node -p "require('./package.json').version"
+          $installerPath = "release/dev-local-assistant-setup-$version.exe"
+          $blockmapPath = "$installerPath.blockmap"
+          $latestPath = "release/latest.yml"
+          $assetPaths = @($installerPath, $blockmapPath, $latestPath)
+
+          foreach ($assetPath in $assetPaths) {
+            if (-not (Test-Path -LiteralPath $assetPath -PathType Leaf)) {
+              throw "缺少发布文件：$assetPath"
+            }
+          }
+
+          $installerHash = (Get-FileHash -LiteralPath $installerPath -Algorithm SHA256).Hash
+          $installerSize = [Math]::Round((Get-Item -LiteralPath $installerPath).Length / 1MB, 2)
+
+          "installer=$installerPath" >> $env:GITHUB_OUTPUT
+          "blockmap=$blockmapPath" >> $env:GITHUB_OUTPUT
+          "latest=$latestPath" >> $env:GITHUB_OUTPUT
+
+          "### Windows 安装包" >> $env:GITHUB_STEP_SUMMARY
+          "- 文件：``$installerPath``" >> $env:GITHUB_STEP_SUMMARY
+          "- 大小：$installerSize MB" >> $env:GITHUB_STEP_SUMMARY
+          "- SHA256：``$installerHash``" >> $env:GITHUB_STEP_SUMMARY
+
+      - name: 创建或更新 GitHub Release
+        shell: pwsh
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $false
+          $assets = @(
+            "${{ steps.assets.outputs.installer }}"
+            "${{ steps.assets.outputs.blockmap }}"
+            "${{ steps.assets.outputs.latest }}"
+          )
+
+          gh release view $env:RELEASE_TAG --json tagName 2>$null | Out-Null
+          $releaseExists = $LASTEXITCODE -eq 0
+
+          if ($releaseExists) {
+            gh release upload $env:RELEASE_TAG @assets --clobber
+          } else {
+            gh release create $env:RELEASE_TAG @assets --verify-tag --generate-notes --title "开发者本地助手 $env:RELEASE_TAG"
+          }
+
+          if ($LASTEXITCODE -ne 0) {
+            throw "GitHub Release 发布失败，退出码：$LASTEXITCODE"
+          }
