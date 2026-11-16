@@ -1,8 +1,15 @@
 import { useState } from 'react';
 import { App, Typography } from 'antd';
-import { ApiOutlined, DatabaseOutlined, FolderOpenOutlined, GlobalOutlined } from '@ant-design/icons';
+import {
+  ApiOutlined,
+  DatabaseOutlined,
+  FolderOpenOutlined,
+  GlobalOutlined,
+  PushpinOutlined,
+} from '@ant-design/icons';
 import type { ReactNode } from 'react';
 import CleanerPage from '../node-modules-cleaner';
+import DesktopNotesManager from './components/DesktopNotesManager';
 import PackageCacheCleaner from './components/PackageCacheCleaner';
 import HostsManager from './components/HostsManager';
 import PortManager from './components/PortManager';
@@ -10,7 +17,7 @@ import './index.less';
 
 const { Title, Text } = Typography;
 
-type AssistantModule = 'node-modules' | 'package-cache' | 'port-manager' | 'hosts-manager';
+type AssistantModule = 'node-modules' | 'package-cache' | 'port-manager' | 'hosts-manager' | 'desktop-notes';
 
 // 固定侧栏模块顺序，避免新增工具后导航位置随渲染条件变化。
 const MODULE_NAV_ITEMS: Array<{
@@ -22,6 +29,7 @@ const MODULE_NAV_ITEMS: Array<{
   { key: 'package-cache', label: '缓存清理', icon: <DatabaseOutlined /> },
   { key: 'port-manager', label: '端口管理', icon: <ApiOutlined /> },
   { key: 'hosts-manager', label: 'Hosts / DNS', icon: <GlobalOutlined /> },
+  { key: 'desktop-notes', label: '桌面便利贴', icon: <PushpinOutlined /> },
 ];
 
 /**
@@ -105,6 +113,7 @@ export default function DeveloperAssistantPage() {
         {activeModule === 'package-cache' ? <PackageCacheCleaner /> : null}
         {activeModule === 'port-manager' ? <PortManager /> : null}
         {activeModule === 'hosts-manager' ? <HostsManager onDirtyChange={setHostsDirty} /> : null}
+        {activeModule === 'desktop-notes' ? <DesktopNotesManager /> : null}
       </section>
     </main>
   );

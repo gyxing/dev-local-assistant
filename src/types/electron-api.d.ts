@@ -1,4 +1,10 @@
 import type {
+  DesktopNotesContentUpdate,
+  DesktopNotesRuntimeUpdate,
+  DesktopNotesSnapshot,
+  DesktopNotesState,
+} from '../../shared/desktop-notes-types';
+import type {
   KillProcessResult,
   PackageCacheCleanResult,
   PackageCacheItem,
@@ -52,9 +58,24 @@ export interface DeveloperAssistantApi {
   flushDns: () => Promise<DnsFlushResult>;
 }
 
+export interface DesktopNotesApi {
+  getSnapshot: () => Promise<DesktopNotesSnapshot>;
+  openWindow: () => Promise<DesktopNotesSnapshot>;
+  closeWindow: () => Promise<DesktopNotesSnapshot>;
+  refresh: () => Promise<DesktopNotesSnapshot>;
+  loadState: () => Promise<DesktopNotesState>;
+  saveState: (state: DesktopNotesState) => Promise<DesktopNotesState>;
+  saveRuntime: (update: DesktopNotesRuntimeUpdate) => Promise<DesktopNotesSnapshot>;
+  updateContent: (update: DesktopNotesContentUpdate) => Promise<DesktopNotesSnapshot>;
+  onSnapshot: (handler: (snapshot: DesktopNotesSnapshot) => void) => () => void;
+  onApplyState: (handler: (state: DesktopNotesState) => void) => () => void;
+  onFlushRequest: (handler: () => DesktopNotesState | undefined) => () => void;
+}
+
 declare global {
   interface Window {
     clearNodeModules?: ClearNodeModulesApi;
     developerAssistant?: DeveloperAssistantApi;
+    desktopNotes?: DesktopNotesApi;
   }
 }

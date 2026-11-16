@@ -1,4 +1,9 @@
 import { contextBridge, ipcRenderer } from 'electron';
+import type {
+  DesktopNotesContentUpdate,
+  DesktopNotesRuntimeUpdate,
+  DesktopNotesState,
+} from '../shared/desktop-notes-types';
 import type { PackageManagerName, PortUsageQuery } from '../shared/developer-tools-types';
 import type { HostsSaveRequest } from '../shared/network-tools-types';
 import type {
@@ -49,4 +54,34 @@ contextBridge.exposeInMainWorld('developerAssistant', {
   restoreHostsBackup: (backupId: string, sourceHash: string) =>
     ipcRenderer.invoke(IPC_CHANNELS.restoreHostsBackup, backupId, sourceHash),
   flushDns: () => ipcRenderer.invoke(IPC_CHANNELS.flushDns),
+});
+
+contextBridge.exposeInMainWorld('desktopNotes', {
+  getSnapshot: () => ipcRenderer.invoke(IPC_CHANNELS.desktopNotesGetSnapshot),
+  openWindow: () => ipcRenderer.invoke(IPC_CHANNELS.desktopNotesOpenWindow),
+  closeWindow: () => ipcRenderer.invoke(IPC_CHANNELS.desktopNotesCloseWindow),
+  refresh: () => ipcRenderer.invoke(IPC_CHANNELS.desktopNotesRefresh),
+  loadState: () => ipcRenderer.invoke(IPC_CHANNELS.desktopNotesLoadState),
+  saveState: (state: DesktopNotesState) => ipcRenderer.invoke(IPC_CHANNELS.desktopNotesSaveState, state),
+  saveRuntime: (update: DesktopNotesRuntimeUpdate) =>
+    ipcRenderer.invoke(IPC_CHANNELS.desktopNotesSaveRuntime, update),
+  updateContent: (update: DesktopNotesContentUpdate) =>
+    ipcRenderer.invoke(IPC_CHANNELS.desktopNotesUpdateContent, update),
+  onSnapshot: (handler: (snapshot: unknown) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, snapshot: unknown) => handler(snapshot);
+    ipcRenderer.on(IPC_CHANNELS.desktopNotesSnapshot, listener);
+    return () => ipcRenderer.removeListener(IPC_CHANNELS.desktopNotesSnapshot, listener);
+  },
+  onApplyState: (handler: (state: DesktopNotesState) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, state: DesktopNotesState) => handler(state);
+    ipcRenderer.on(IPC_CHANNELS.desktopNotesApplyState, listener);
+    return () => ipcRenderer.removeListener(IPC_CHANNELS.desktopNotesApplyState, listener);
+  },
+  onFlushRequest: (handler: () => DesktopNotesState | undefined) => {
+    const listener = (_event: Electron.IpcRendererEvent, requestId: string) => {
+      ipcRenderer.send(IPC_CHANNELS.desktopNotesFlushResult, { requestId, state: handler() });
+    };
+    ipcRenderer.on(IPC_CHANNELS.desktopNotesFlush, listener);
+    return () => ipcRenderer.removeListener(IPC_CHANNELS.desktopNotesFlush, listener);
+  },
 });

@@ -5,3 +5,5 @@ allowBuilds:
   electron-winstaller: false
   es5-ext: true
   esbuild: true
+minimumReleaseAgeExclude:
+  - electron@45.3.3

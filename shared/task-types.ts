@@ -44,10 +44,24 @@ export interface IgnoredProject {
   createdAt: number;
 }
 
+/** 应用运行方式。关闭主窗口的默认行为是隐藏到托盘，不退出进程。 */
+export interface AppRuntimePreferences {
+  launchAtLogin: boolean;
+  quitWhenMainWindowCloses: boolean;
+  notesWindowOpen: boolean;
+}
+
+export const DEFAULT_APP_RUNTIME_PREFERENCES: AppRuntimePreferences = {
+  launchAtLogin: false,
+  quitWhenMainWindowCloses: false,
+  notesWindowOpen: false,
+};
+
 export interface AppConfig {
   protectedProjects: ProtectedProject[];
   directoryHistory: DirectoryHistoryItem[];
   ignoredProjects: IgnoredProject[];
+  runtime: AppRuntimePreferences;
 }
 
 export type NodeModulesItemStatus =

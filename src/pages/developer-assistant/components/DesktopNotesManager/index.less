@@ -1,0 +1,173 @@
+.desktop-notes-manager {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  height: 100%;
+  min-height: 0;
+  overflow: auto;
+}
+
+.desktop-notes-manager__header {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 32px;
+}
+
+.desktop-notes-manager__actions {
+  flex: 0 0 auto;
+  margin-right: 12px;
+  white-space: nowrap;
+}
+
+.desktop-notes-manager__actions .ant-btn {
+  min-width: 88px;
+}
+
+.desktop-notes-manager__heading {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.desktop-notes-manager__title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.desktop-notes-manager__title {
+  margin-bottom: 0 !important;
+  font-size: 15px !important;
+  line-height: 20px !important;
+}
+
+.desktop-notes-manager .ant-card-head {
+  min-height: 32px;
+  padding: 0 10px;
+  font-size: 13px;
+}
+
+.desktop-notes-manager .ant-card-head-title {
+  padding: 6px 0;
+}
+
+.desktop-notes-manager .ant-card-body {
+  padding: 8px 10px;
+}
+
+.desktop-notes-manager__runtime {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.desktop-notes-manager__runtime-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 52px;
+  padding: 8px 10px;
+  background: var(--cleaner-surface-soft);
+  border: 1px solid var(--cleaner-border-soft);
+  border-radius: 8px;
+}
+
+.desktop-notes-manager__runtime-title {
+  display: block;
+  color: var(--cleaner-text-strong);
+  font-weight: 600;
+}
+
+.desktop-notes-manager__settings {
+  display: grid;
+  grid-template-columns: 96px 96px 72px minmax(140px, 1fr) minmax(140px, 1fr) auto;
+  gap: 8px 12px;
+  align-items: end;
+}
+
+.desktop-notes-manager__window {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 8px 12px;
+}
+
+.desktop-notes-manager__window .desktop-notes-manager__field {
+  width: 96px;
+}
+
+.desktop-notes-manager__anchors,
+.desktop-notes-manager__nudge {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.desktop-notes-manager__placement {
+  flex: 1 1 220px;
+  min-width: 180px;
+  font-size: 12px;
+  line-height: 20px;
+}
+
+.desktop-notes-manager__field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  color: var(--cleaner-text-muted);
+  font-size: 12px;
+}
+
+.desktop-notes-manager__field .ant-input-number {
+  width: 100%;
+}
+
+.desktop-notes-manager__field--switch {
+  justify-content: flex-end;
+}
+
+.desktop-notes-manager__window .ant-btn {
+  justify-self: start;
+  align-self: end;
+}
+
+@media (max-width: 860px) {
+  .desktop-notes-manager__runtime {
+    grid-template-columns: 1fr;
+  }
+}
+
+.desktop-notes-manager__hint {
+  display: block;
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.desktop-notes-manager__field .ant-slider {
+  margin: 2px 6px 0;
+}
+
+.desktop-notes-manager__edit-pin {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.desktop-notes-manager__swatch {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 4px;
+}
+
+.desktop-notes-manager__data .ant-table-wrapper {
+  min-height: 72px;
+}

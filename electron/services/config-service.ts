@@ -1,11 +1,13 @@
 import { randomUUID } from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import type {
-  AppConfig,
-  DirectoryHistoryItem,
-  IgnoredProject,
-  ProtectedProject,
+import {
+  DEFAULT_APP_RUNTIME_PREFERENCES,
+  type AppConfig,
+  type AppRuntimePreferences,
+  type DirectoryHistoryItem,
+  type IgnoredProject,
+  type ProtectedProject,
 } from '../../shared/task-types';
 
 const CONFIG_FILE_NAME = 'config.json';
@@ -56,9 +58,30 @@ function sanitizeIgnoredProject(project: IgnoredProject): IgnoredProject {
   };
 }
 
+function normalizeRuntime(value: unknown): AppRuntimePreferences {
+  if (!isRecord(value)) {
+    return { ...DEFAULT_APP_RUNTIME_PREFERENCES };
+  }
+
+  return {
+    launchAtLogin: value.launchAtLogin === true,
+    quitWhenMainWindowCloses: value.quitWhenMainWindowCloses === true,
+    notesWindowOpen: value.notesWindowOpen === true,
+  };
+}
+
+function createEmptyConfig(): AppConfig {
+  return {
+    protectedProjects: [],
+    directoryHistory: [],
+    ignoredProjects: [],
+    runtime: { ...DEFAULT_APP_RUNTIME_PREFERENCES },
+  };
+}
+
 function parseConfig(value: unknown): AppConfig {
   if (!isRecord(value)) {
-    return { protectedProjects: [], directoryHistory: [], ignoredProjects: [] };
+    return createEmptyConfig();
   }
 
   const protectedProjects = (Array.isArray(value.protectedProjects) ? value.protectedProjects : [])
@@ -110,7 +133,7 @@ function parseConfig(value: unknown): AppConfig {
     })
     .map(sanitizeIgnoredProject);
 
-  return { protectedProjects, directoryHistory, ignoredProjects };
+  return { protectedProjects, directoryHistory, ignoredProjects, runtime: normalizeRuntime(value.runtime) };
 }
 
 export class ConfigService {
@@ -125,7 +148,7 @@ export class ConfigService {
       const content = await fs.readFile(this.configPath, 'utf8');
       return parseConfig(JSON.parse(content));
     } catch {
-      return { protectedProjects: [], directoryHistory: [], ignoredProjects: [] };
+      return createEmptyConfig();
     }
   }
 
@@ -142,6 +165,7 @@ export class ConfigService {
       protectedProjects: Array.from(uniqueProjects.values()),
       directoryHistory: currentConfig.directoryHistory,
       ignoredProjects: currentConfig.ignoredProjects,
+      runtime: currentConfig.runtime,
     };
 
     return this.writeConfig(config);
@@ -162,6 +186,7 @@ export class ConfigService {
         .sort((left, right) => right.lastUsedAt - left.lastUsedAt)
         .slice(0, MAX_DIRECTORY_HISTORY_COUNT),
       ignoredProjects: currentConfig.ignoredProjects,
+      runtime: currentConfig.runtime,
     };
 
     return this.writeConfig(config);
@@ -180,9 +205,18 @@ export class ConfigService {
       protectedProjects: currentConfig.protectedProjects,
       directoryHistory: currentConfig.directoryHistory,
       ignoredProjects: Array.from(uniqueProjects.values()),
+      runtime: currentConfig.runtime,
     };
 
     return this.writeConfig(config);
+  }
+
+  async saveRuntime(runtime: AppRuntimePreferences): Promise<AppConfig> {
+    const currentConfig = await this.getConfig();
+    return this.writeConfig({
+      ...currentConfig,
+      runtime: normalizeRuntime(runtime),
+    });
   }
 
   private async writeConfig(config: AppConfig): Promise<AppConfig> {

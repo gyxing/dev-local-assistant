@@ -1,0 +1,210 @@
+@paper-border: rgba(80, 72, 56, 0.14);
+@paper-bg: rgba(255, 252, 244, 0.9);
+@paper-bg-strong: rgba(255, 252, 244, 0.96);
+@paper-bg-hover: rgba(255, 249, 231, 0.96);
+@text-primary: #3f3a33;
+@text-secondary: #5c554a;
+@icon-color: #665d4e;
+@shadow-soft: 0 4px 14px rgba(52, 46, 34, 0.08);
+@shadow-card: 0 8px 24px rgba(48, 42, 30, 0.12);
+@shadow-popover: 0 12px 30px rgba(48, 42, 30, 0.16);
+@sticky-note-width: 172px;
+
+.desktop-notes {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: transparent;
+  color: @text-primary;
+  user-select: none;
+  font-family: 'Microsoft YaHei UI', 'Segoe UI', sans-serif;
+
+  button,
+  textarea,
+  input {
+    font: inherit;
+  }
+
+  .note-surface {
+    position: absolute;
+    inset: 0;
+    padding: 18px;
+  }
+
+  .surface-action {
+    position: absolute;
+    right: 18px;
+    bottom: 18px;
+    z-index: 1250;
+    display: grid;
+    width: 36px;
+    height: 36px;
+    place-items: center;
+    border: 1px solid @paper-border;
+    border-radius: 9px;
+    background: @paper-bg-strong;
+    color: @icon-color;
+    font-size: 18px;
+    cursor: pointer;
+    box-shadow: @shadow-card;
+  }
+
+  .sticky-note {
+    position: absolute;
+    width: @sticky-note-width;
+    min-height: 96px;
+    padding: 14px 14px 12px;
+    border: 1px solid rgba(92, 78, 48, 0.1);
+    border-radius: 7px;
+    color: @text-primary;
+    cursor: grab;
+    box-shadow: @shadow-card;
+
+    &.is-pinned {
+      border-color: rgba(105, 84, 38, 0.22);
+    }
+  }
+
+  .note-text {
+    display: -webkit-box;
+    margin: 0;
+    overflow: hidden;
+    line-height: 1.55;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+    -webkit-box-orient: vertical;
+  }
+
+  .note-editor {
+    width: 100%;
+    min-height: 84px;
+    padding: 0;
+    resize: none;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: @text-primary;
+    line-height: 1.55;
+  }
+
+  .note-menu {
+    position: absolute;
+    right: 8px;
+    top: 8px;
+    display: grid;
+    gap: 4px;
+    width: 96px;
+    padding: 6px;
+    border: 1px solid rgba(70, 64, 52, 0.14);
+    border-radius: 7px;
+    background: @paper-bg-strong;
+    box-shadow: 0 10px 26px rgba(42, 36, 24, 0.16);
+
+    button {
+      min-height: 26px;
+      border: 0;
+      border-radius: 5px;
+      background: transparent;
+      color: #4c463d;
+      text-align: left;
+      cursor: pointer;
+    }
+  }
+
+  .overflow-tag {
+    position: absolute;
+    right: 60px;
+    bottom: 18px;
+    z-index: 1200;
+    height: 34px;
+    padding: 0 12px;
+    border: 1px solid @paper-border;
+    border-radius: 9px;
+    background: rgba(255, 252, 244, 0.82);
+    color: @text-secondary;
+    cursor: pointer;
+  }
+
+  .overflow-panel {
+    position: absolute;
+    right: 18px;
+    bottom: 60px;
+    z-index: 1100;
+    display: grid;
+    gap: 8px;
+    width: 220px;
+    max-height: 260px;
+    padding: 10px;
+    overflow-y: auto;
+    border: 1px solid @paper-border;
+    border-radius: 8px;
+    background: rgba(255, 252, 244, 0.94);
+    box-shadow: @shadow-popover;
+  }
+
+  .overflow-item {
+    width: 100%;
+    padding: 9px 10px;
+    border: 1px solid rgba(90, 78, 52, 0.1);
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.46);
+    color: #484238;
+    cursor: pointer;
+    text-align: left;
+
+    span {
+      display: -webkit-box;
+      overflow: hidden;
+      line-height: 1.45;
+      overflow-wrap: anywhere;
+      white-space: pre-wrap;
+      -webkit-box-orient: vertical;
+    }
+  }
+
+  .settings-popover {
+    position: absolute;
+    right: 18px;
+    top: 18px;
+    z-index: 1300;
+    width: 280px;
+    padding: 12px;
+    border: 1px solid @paper-border;
+    border-radius: 8px;
+    background: @paper-bg-strong;
+    color: #4c463d;
+    box-shadow: @shadow-popover;
+  }
+
+  .settings-header,
+  .settings-row,
+  .settings-slider,
+  .settings-check {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .settings-header {
+    margin-bottom: 10px;
+  }
+
+  .settings-row,
+  .settings-slider,
+  .settings-check {
+    margin-top: 10px;
+  }
+
+  .settings-number {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .settings-slider .ant-slider {
+    flex: 1 1 auto;
+    margin: 0;
+  }
+}

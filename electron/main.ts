@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { app, BrowserWindow, dialog, ipcMain } from 'electron';
+import { DesktopNotesController, getAppIconPath } from './desktop-notes-controller';
 import { IPC_CHANNELS } from './ipc/channels';
 import { ConfigService } from './services/config-service';
 import { DeleteService } from './services/delete-service';
@@ -8,6 +9,7 @@ import { ElevationService } from './services/elevation-service';
 import { HostsService } from './services/hosts-service';
 import { PackageCacheService } from './services/package-cache-service';
 import { PortService } from './services/port-service';
+import { DesktopNotesService } from './services/desktop-notes-service';
 import { ScanService } from './services/scan-service';
 import { calculateDirectorySize } from './services/size-service';
 import type { PackageManagerName, PortUsageQuery } from '../shared/developer-tools-types';
@@ -23,6 +25,7 @@ import type {
 
 let mainWindow: BrowserWindow | undefined;
 let configService: ConfigService;
+let desktopNotesController: DesktopNotesController;
 let dnsService: DnsService;
 let hostsService: HostsService;
 const scanService = new ScanService();
@@ -52,6 +55,7 @@ function createWindow() {
     minWidth: 980,
     minHeight: 640,
     title: '开发者本地助手',
+    icon: getAppIconPath(),
     webPreferences: {
       preload: getPreloadPath(),
       contextIsolation: true,
@@ -60,6 +64,8 @@ function createWindow() {
       sandbox: false,
     },
   });
+
+  desktopNotesController.attachMainWindow(mainWindow);
 
   if (process.env.NODE_ENV === 'development') {
     void mainWindow.loadURL(process.env.DEV_SERVER_URL ?? 'http://127.0.0.1:8137');
@@ -340,16 +346,26 @@ function registerDeveloperToolsHandlers() {
   ipcMain.handle(IPC_CHANNELS.flushDns, async () => dnsService.flush());
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  app.setAppUserModelId('com.devlocalassistant.app');
   configService = new ConfigService(app.getPath('userData'));
   const elevationService = new ElevationService(getHostsHelperPath());
   dnsService = new DnsService(elevationService);
   hostsService = new HostsService(app.getPath('userData'), elevationService, dnsService);
+  desktopNotesController = new DesktopNotesController({
+    configService,
+    notesService: new DesktopNotesService(app.getPath('userData')),
+    getPreloadPath,
+    getRendererEntry,
+    getIconPath: getAppIconPath,
+  });
   registerDialogHandlers();
   registerConfigHandlers();
   registerScanHandlers();
   registerDeleteHandlers();
   registerDeveloperToolsHandlers();
+  desktopNotesController.registerIpc();
+  await desktopNotesController.start();
   createWindow();
 
   app.on('activate', () => {
@@ -360,7 +376,11 @@ app.whenReady().then(() => {
 });
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
+  if (process.platform === 'darwin') {
+    return;
+  }
+
+  if (desktopNotesController.shouldQuitWhenAllWindowsClosed()) {
     app.quit();
   }
 });
