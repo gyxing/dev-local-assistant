@@ -9,6 +9,10 @@ export const DESKTOP_NOTES_SCHEMA_VERSION = 2;
 
 export const DEFAULT_NOTES_WINDOW_WIDTH = 560;
 export const DEFAULT_NOTES_WINDOW_HEIGHT = 420;
+/** 检测范围时便利贴窗口高亮的持续时间 */
+export const DESKTOP_NOTES_HIGHLIGHT_DURATION_MS = 3000;
+/** 没有贴纸时窗口收缩到的边长，刚好包住右下角的新建按钮 */
+export const DESKTOP_NOTES_COMPACT_SIZE = 80;
 
 export const DEFAULT_DESKTOP_NOTE_SETTINGS: DesktopNoteSettings = {
   maxVisibleNotes: 12,

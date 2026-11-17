@@ -207,4 +207,28 @@
     flex: 1 1 auto;
     margin: 0;
   }
+
+  /* 检测范围时覆盖整个便利贴窗口，pointer-events 保证高亮期间仍可操作贴纸 */
+  .desktop-notes__highlight {
+    position: absolute;
+    inset: 0;
+    z-index: 2000;
+    display: grid;
+    place-items: center;
+    pointer-events: none;
+    border: 2px dashed rgba(214, 145, 20, 0.9);
+    border-radius: 10px;
+    background: rgba(250, 205, 92, 0.3);
+  }
+
+  .desktop-notes__highlight-size {
+    padding: 6px 14px;
+    border-radius: 999px;
+    background: rgba(255, 250, 235, 0.92);
+    color: #7a5a12;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.02em;
+    box-shadow: 0 4px 14px rgba(52, 46, 34, 0.18);
+  }
 }

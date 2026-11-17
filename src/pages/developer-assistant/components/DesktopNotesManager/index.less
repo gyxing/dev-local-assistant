@@ -115,6 +115,13 @@
   line-height: 20px;
 }
 
+/* 空状态收缩说明独占一行，避免挤压宽高输入框 */
+.desktop-notes-manager__compact-hint {
+  flex: 1 1 100%;
+  font-size: 12px;
+  line-height: 18px;
+}
+
 .desktop-notes-manager__field {
   display: flex;
   flex-direction: column;
@@ -170,4 +177,9 @@
 
 .desktop-notes-manager__data .ant-table-wrapper {
   min-height: 72px;
+}
+
+/* 贴纸文本可能较长，限制行内删除确认弹层的宽度 */
+.desktop-notes-manager .ant-popconfirm {
+  max-width: 340px;
 }

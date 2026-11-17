@@ -67,6 +67,11 @@ export interface DesktopNotesApi {
   saveState: (state: DesktopNotesState) => Promise<DesktopNotesState>;
   saveRuntime: (update: DesktopNotesRuntimeUpdate) => Promise<DesktopNotesSnapshot>;
   updateContent: (update: DesktopNotesContentUpdate) => Promise<DesktopNotesSnapshot>;
+  highlightBounds: () => Promise<DesktopNotesSnapshot>;
+  onBoundsHighlight: (handler: (durationMs: number) => void) => () => void;
+  takeBoundsHighlight: () => Promise<boolean>;
+  setCompact: (compact: boolean) => Promise<void>;
+  endBoundsHighlight: () => Promise<void>;
   onSnapshot: (handler: (snapshot: DesktopNotesSnapshot) => void) => () => void;
   onApplyState: (handler: (state: DesktopNotesState) => void) => () => void;
   onFlushRequest: (handler: () => DesktopNotesState | undefined) => () => void;

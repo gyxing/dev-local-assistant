@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { app, BrowserWindow, dialog, ipcMain } from 'electron';
-import { DesktopNotesController, getAppIconPath } from './desktop-notes-controller';
+import { BACKGROUND_LAUNCH_ARG, DesktopNotesController, getAppIconPath } from './desktop-notes-controller';
 import { IPC_CHANNELS } from './ipc/channels';
 import { ConfigService } from './services/config-service';
 import { DeleteService } from './services/delete-service';
@@ -54,7 +54,7 @@ function createWindow() {
     height: 760,
     minWidth: 980,
     minHeight: 640,
-    title: '开发者本地助手',
+    title: '开发者工具箱',
     icon: getAppIconPath(),
     webPreferences: {
       preload: getPreloadPath(),
@@ -73,6 +73,26 @@ function createWindow() {
   }
 
   void mainWindow.loadFile(getRendererEntry());
+}
+
+/** 创建或显示主窗口；托盘点击与二次启动都通过它回到主界面 */
+function showMainWindow() {
+  // 启动尚未完成时忽略，避免在桌面便利贴控制器初始化前创建窗口
+  if (!desktopNotesController) {
+    return;
+  }
+
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    createWindow();
+    return;
+  }
+
+  if (mainWindow.isMinimized()) {
+    mainWindow.restore();
+  }
+
+  mainWindow.show();
+  mainWindow.focus();
 }
 
 function registerDialogHandlers() {
@@ -346,41 +366,64 @@ function registerDeveloperToolsHandlers() {
   ipcMain.handle(IPC_CHANNELS.flushDns, async () => dnsService.flush());
 }
 
-app.whenReady().then(async () => {
-  app.setAppUserModelId('com.devlocalassistant.app');
-  configService = new ConfigService(app.getPath('userData'));
-  const elevationService = new ElevationService(getHostsHelperPath());
-  dnsService = new DnsService(elevationService);
-  hostsService = new HostsService(app.getPath('userData'), elevationService, dnsService);
-  desktopNotesController = new DesktopNotesController({
-    configService,
-    notesService: new DesktopNotesService(app.getPath('userData')),
-    getPreloadPath,
-    getRendererEntry,
-    getIconPath: getAppIconPath,
-  });
-  registerDialogHandlers();
-  registerConfigHandlers();
-  registerScanHandlers();
-  registerDeleteHandlers();
-  registerDeveloperToolsHandlers();
-  desktopNotesController.registerIpc();
-  await desktopNotesController.start();
-  createWindow();
+// 开机自启带 --background 参数，此时只恢复便利贴，不打开主窗口
+const isBackgroundLaunch = process.argv.includes(BACKGROUND_LAUNCH_ARG);
 
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
+// 单实例锁：避免开机自启的实例与手动启动的实例并存两套托盘和便利贴。
+// 开发模式跳过，否则已安装的正式版会拦截 dev 启动。
+const hasSingleInstanceLock = !app.isPackaged || app.requestSingleInstanceLock();
+
+if (!hasSingleInstanceLock) {
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    if (!app.isReady()) {
+      return;
+    }
+
+    showMainWindow();
+  });
+
+  app.whenReady().then(async () => {
+    app.setAppUserModelId('com.devbox.app');
+    configService = new ConfigService(app.getPath('userData'));
+    const elevationService = new ElevationService(getHostsHelperPath());
+    dnsService = new DnsService(elevationService);
+    hostsService = new HostsService(app.getPath('userData'), elevationService, dnsService);
+    desktopNotesController = new DesktopNotesController({
+      configService,
+      notesService: new DesktopNotesService(app.getPath('userData')),
+      getPreloadPath,
+      getRendererEntry,
+      getIconPath: getAppIconPath,
+      openMainWindow: showMainWindow,
+    });
+    registerDialogHandlers();
+    registerConfigHandlers();
+    registerScanHandlers();
+    registerDeleteHandlers();
+    registerDeveloperToolsHandlers();
+    desktopNotesController.registerIpc();
+    await desktopNotesController.start({ background: isBackgroundLaunch });
+
+    if (!isBackgroundLaunch) {
       createWindow();
     }
+
+    app.on('activate', () => {
+      if (BrowserWindow.getAllWindows().length === 0) {
+        createWindow();
+      }
+    });
   });
-});
 
-app.on('window-all-closed', () => {
-  if (process.platform === 'darwin') {
-    return;
-  }
+  app.on('window-all-closed', () => {
+    if (process.platform === 'darwin') {
+      return;
+    }
 
-  if (desktopNotesController.shouldQuitWhenAllWindowsClosed()) {
-    app.quit();
-  }
-});
+    if (desktopNotesController.shouldQuitWhenAllWindowsClosed()) {
+      app.quit();
+    }
+  });
+}

@@ -34,5 +34,10 @@ export const IPC_CHANNELS = {
   desktopNotesFlush: 'desktop-notes:flush',
   desktopNotesFlushResult: 'desktop-notes:flush-result',
   desktopNotesApplyState: 'desktop-notes:apply-state',
+  desktopNotesHighlightBounds: 'desktop-notes:highlight-bounds',
+  desktopNotesBoundsHighlight: 'desktop-notes:bounds-highlight',
+  desktopNotesTakeBoundsHighlight: 'desktop-notes:take-bounds-highlight',
+  desktopNotesSetCompact: 'desktop-notes:set-compact',
+  desktopNotesEndBoundsHighlight: 'desktop-notes:end-bounds-highlight',
   taskEvent: 'task:event',
 } as const;

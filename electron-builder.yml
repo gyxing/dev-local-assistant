@@ -1,5 +1,5 @@
-appId: com.devlocalassistant.app
-productName: 开发者本地助手
+appId: com.devbox.app
+productName: 开发者工具箱
 asar: true
 
 directories:
@@ -16,6 +16,11 @@ extraResources:
   - from: build/icon.ico
     to: icon.ico
 
+# 只打包应用实际使用的 Chromium 语言资源，去掉其余 53 个 pak（约 47 MB 未压缩体积）
+electronLanguages:
+  - zh-CN
+  - en-US
+
 win:
   icon: build/icon.ico
   target:
@@ -24,11 +29,14 @@ win:
         - x64
 
 nsis:
-  oneClick: true
+  oneClick: false
   perMachine: false
+  allowElevation: true
+  allowToChangeInstallationDirectory: true
   createDesktopShortcut: always
   createStartMenuShortcut: true
-  shortcutName: 开发者本地助手
+  shortcutName: 开发者工具箱
   runAfterFinish: true
 
-artifactName: dev-local-assistant-setup-${version}.${ext}
+# 文件名由 package.json 的 name 驱动，平台与架构段便于将来多平台产物并存
+artifactName: ${name}-${os}-${arch}-${version}.${ext}

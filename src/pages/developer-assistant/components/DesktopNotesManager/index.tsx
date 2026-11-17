@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { Button, Card, Descriptions, Input, InputNumber, Modal, Slider, Space, Switch, Table, Tag, Typography, message } from 'antd';
+import { Button, Card, Descriptions, Input, InputNumber, Modal, Popconfirm, Slider, Space, Switch, Table, Tag, Typography, message } from 'antd';
 import {
   ArrowDownOutlined,
   ArrowLeftOutlined,
   ArrowRightOutlined,
   ArrowUpOutlined,
+  BorderOutlined,
   CheckOutlined,
   CloseOutlined,
   PlayCircleOutlined,
@@ -40,6 +41,7 @@ export default function DesktopNotesManager() {
   const [pendingAction, setPendingAction] = useState<'open' | 'close' | 'refresh'>();
   const [savingRuntime, setSavingRuntime] = useState(false);
   const [savingContent, setSavingContent] = useState(false);
+  const [highlightingBounds, setHighlightingBounds] = useState(false);
   const [boundsDraft, setBoundsDraft] = useState<DesktopNotesWindowBounds>();
   const [boundsDirty, setBoundsDirty] = useState(false);
   const [settingsDraft, setSettingsDraft] = useState<DesktopNoteSettings>();
@@ -182,15 +184,22 @@ export default function DesktopNotesManager() {
     setEditPinned(note.pinned);
   }
 
-  function confirmDeleteNote(note: DesktopNote) {
-    Modal.confirm({
-      title: '删除这张贴纸？',
-      content: note.text,
-      okText: '删除',
-      cancelText: '取消',
-      okButtonProps: { danger: true },
-      onOk: () => updateContent({ deleteNoteId: note.id }),
-    });
+  async function highlightBounds() {
+    const api = window.desktopNotes;
+    if (!api) {
+      message.error('当前页面未连接 Electron 能力');
+      return;
+    }
+
+    setHighlightingBounds(true);
+    try {
+      setSnapshot(await api.highlightBounds());
+      message.success('便利贴区域已高亮 3 秒');
+    } catch (error: unknown) {
+      message.error(error instanceof Error ? error.message : '检测便利贴范围失败');
+    } finally {
+      setHighlightingBounds(false);
+    }
   }
 
   const columns: TableColumnsType<DesktopNote> = [
@@ -230,15 +239,19 @@ export default function DesktopNotesManager() {
           <Button type="link" size="small" disabled={!apiAvailable || savingContent} onClick={() => openNoteEditor(note)}>
             编辑
           </Button>
-          <Button
-            type="link"
-            size="small"
-            danger
+          <Popconfirm
+            title="删除这张贴纸？"
+            description={note.text}
+            okText="删除"
+            cancelText="取消"
+            okButtonProps={{ danger: true }}
             disabled={!apiAvailable || savingContent}
-            onClick={() => confirmDeleteNote(note)}
+            onConfirm={() => updateContent({ deleteNoteId: note.id })}
           >
-            删除
-          </Button>
+            <Button type="link" size="small" danger disabled={!apiAvailable || savingContent}>
+              删除
+            </Button>
+          </Popconfirm>
         </Space>
       ),
     },
@@ -407,6 +420,11 @@ export default function DesktopNotesManager() {
 
       <Card size="small" title="窗口">
         <div className="desktop-notes-manager__window">
+          {snapshot?.windowOpen && snapshot.state.notes.length === 0 ? (
+            <Text type="secondary" className="desktop-notes-manager__compact-hint">
+              当前没有贴纸，便利贴窗口已收缩为右下角的新建按钮；窗口设置将在添加贴纸后生效。
+            </Text>
+          ) : null}
           <label className="desktop-notes-manager__field">
             <span>宽度</span>
             <InputNumber
@@ -505,6 +523,16 @@ export default function DesktopNotesManager() {
           <Text type="secondary" className="desktop-notes-manager__placement">
             {boundsDraft && snapshot?.workArea ? describeNotesWindow(boundsDraft, snapshot.workArea) : '等待读取屏幕位置'}
           </Text>
+          <Button
+            size="small"
+            icon={<BorderOutlined />}
+            loading={highlightingBounds}
+            disabled={!apiAvailable || !snapshot?.windowOpen}
+            title={snapshot?.windowOpen ? undefined : '请先打开便利贴窗口'}
+            onClick={() => void highlightBounds()}
+          >
+            检测范围
+          </Button>
           <Button
             type="primary"
             size="small"

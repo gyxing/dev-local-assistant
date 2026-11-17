@@ -33,7 +33,7 @@ const MODULE_NAV_ITEMS: Array<{
 ];
 
 /**
- * 开发者本地助手首页，负责在多个本地辅助工具之间切换。
+ * 开发者工具箱首页，负责在多个本地辅助工具之间切换。
  */
 export default function DeveloperAssistantPage() {
   const { modal } = App.useApp();
@@ -68,14 +68,14 @@ export default function DeveloperAssistantPage() {
       <aside className="developer-assistant__sidebar">
         <div className="developer-assistant__brand">
           <Title level={4} className="developer-assistant__title">
-            开发者助手
+            开发者工具箱
           </Title>
           <Text type="secondary" className="developer-assistant__subtitle">
-            本地工具箱
+            本地效率工具集
           </Text>
         </div>
 
-        <nav className="developer-assistant__menu" aria-label="开发者本地助手模块">
+        <nav className="developer-assistant__menu" aria-label="开发者工具箱模块">
           {MODULE_NAV_ITEMS.map((item) => {
             const active = activeModule === item.key;
 

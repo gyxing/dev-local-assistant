@@ -5,6 +5,8 @@ import {
   createEmptyDesktopNotesState,
   DEFAULT_NOTES_WINDOW_HEIGHT,
   DEFAULT_NOTES_WINDOW_WIDTH,
+  DESKTOP_NOTES_COMPACT_SIZE,
+  DESKTOP_NOTES_HIGHLIGHT_DURATION_MS,
   normalizeDesktopNoteSettings,
   normalizeDesktopNotesWindowBounds,
 } from '../shared/desktop-notes-state';
@@ -23,12 +25,17 @@ import { DesktopNotesService } from './services/desktop-notes-service';
 const NOTES_WINDOW_MARGIN = 20;
 const FLUSH_TIMEOUT_MS = 1500;
 
+/** 开机自启时附加的启动参数，用于跳过主窗口、只恢复便利贴 */
+export const BACKGROUND_LAUNCH_ARG = '--background';
+
 interface DesktopNotesControllerOptions {
   configService: ConfigService;
   notesService: DesktopNotesService;
   getPreloadPath: () => string;
   getRendererEntry: () => string;
   getIconPath: () => string;
+  /** 创建或显示主窗口；后台启动时主窗口可能还不存在，由调用方按需创建 */
+  openMainWindow: () => void;
 }
 
 /**
@@ -41,11 +48,20 @@ export class DesktopNotesController {
   private readonly getPreloadPath: () => string;
   private readonly getRendererEntry: () => string;
   private readonly getIconPath: () => string;
+  private readonly openMainWindow: () => void;
   private mainWindow?: BrowserWindow;
   private notesWindow?: BrowserWindow;
   private tray?: Tray;
   private quitting = false;
   private runtime: AppRuntimePreferences = { ...DEFAULT_APP_RUNTIME_PREFERENCES };
+  /** 用户设定的完整窗口范围，空状态收缩时保留，有贴纸后用它恢复 */
+  private normalBounds?: DesktopNotesWindowBounds;
+  /** 当前是否处于没有贴纸的收缩状态 */
+  private compactMode = false;
+  /** 便利贴窗口刚创建时渲染进程可能还没挂监听，用它兜底一次高亮请求 */
+  private pendingBoundsHighlight = false;
+  /** 检测范围期间临时置顶的恢复定时器 */
+  private highlightRestoreTimer?: NodeJS.Timeout;
 
   constructor(options: DesktopNotesControllerOptions) {
     this.configService = options.configService;
@@ -53,9 +69,10 @@ export class DesktopNotesController {
     this.getPreloadPath = options.getPreloadPath;
     this.getRendererEntry = options.getRendererEntry;
     this.getIconPath = options.getIconPath;
+    this.openMainWindow = options.openMainWindow;
   }
 
-  async start() {
+  async start(options: { background?: boolean } = {}) {
     const config = await this.configService.getConfig();
     this.runtime = config.runtime;
     this.applyLaunchAtLogin(this.runtime.launchAtLogin);
@@ -63,6 +80,11 @@ export class DesktopNotesController {
 
     if (this.runtime.notesWindowOpen) {
       await this.openNotesWindow();
+    }
+
+    // 开机自启不显示主窗口，提前建好托盘，保证用户关掉便利贴后仍有操作入口
+    if (options.background) {
+      this.ensureTray();
     }
   }
 
@@ -88,6 +110,67 @@ export class DesktopNotesController {
     ipcMain.handle(IPC_CHANNELS.desktopNotesUpdateContent, (event, update: DesktopNotesContentUpdate) =>
       this.updateContent(event.sender.id, update),
     );
+    ipcMain.handle(IPC_CHANNELS.desktopNotesHighlightBounds, () => this.highlightNotesBounds());
+    ipcMain.handle(IPC_CHANNELS.desktopNotesTakeBoundsHighlight, () => this.takePendingBoundsHighlight());
+    ipcMain.handle(IPC_CHANNELS.desktopNotesSetCompact, (_, compact: boolean) => {
+      this.applyCompact(compact);
+    });
+    ipcMain.handle(IPC_CHANNELS.desktopNotesEndBoundsHighlight, () => {
+      this.endBoundsHighlight();
+    });
+  }
+
+  /** 让便利贴窗口闪烁提示自身范围；窗口未打开时前端已禁用入口，这里只兜底 */
+  private async highlightNotesBounds() {
+    const target = this.notesWindow;
+    if (!target || target.isDestroyed()) {
+      return this.readSnapshot();
+    }
+
+    // 检测期间临时置顶，避免高亮区域被主窗口或其它窗口挡住
+    target.setAlwaysOnTop(true);
+    target.moveTop();
+    this.scheduleHighlightRestore();
+
+    this.pendingBoundsHighlight = true;
+    target.webContents.send(IPC_CHANNELS.desktopNotesBoundsHighlight, DESKTOP_NOTES_HIGHLIGHT_DURATION_MS);
+    return this.readSnapshot();
+  }
+
+  /** 渲染进程高亮动画结束时立即取消置顶，恢复窗口原有层级 */
+  private endBoundsHighlight() {
+    this.clearHighlightRestore();
+    this.restoreNotesWindowLayer();
+  }
+
+  /** 兜底恢复：渲染进程没有回报结束时也按时取消置顶，避免窗口长期置顶 */
+  private scheduleHighlightRestore() {
+    this.clearHighlightRestore();
+    this.highlightRestoreTimer = setTimeout(() => {
+      this.highlightRestoreTimer = undefined;
+      this.restoreNotesWindowLayer();
+    }, DESKTOP_NOTES_HIGHLIGHT_DURATION_MS + 1000);
+  }
+
+  private restoreNotesWindowLayer() {
+    const target = this.notesWindow;
+    if (target && !target.isDestroyed()) {
+      target.setAlwaysOnTop(false);
+    }
+  }
+
+  private clearHighlightRestore() {
+    if (this.highlightRestoreTimer) {
+      clearTimeout(this.highlightRestoreTimer);
+      this.highlightRestoreTimer = undefined;
+    }
+  }
+
+  /** 渲染进程挂载后领取一次待处理的高亮请求，避免窗口创建瞬间事件丢失 */
+  private takePendingBoundsHighlight() {
+    const pending = this.pendingBoundsHighlight;
+    this.pendingBoundsHighlight = false;
+    return pending;
   }
 
   shouldQuitWhenAllWindowsClosed() {
@@ -125,25 +208,16 @@ export class DesktopNotesController {
     }
 
     this.tray = new Tray(this.getIconPath());
-    this.tray.setToolTip('开发者本地助手');
+    this.tray.setToolTip('开发者工具箱');
     this.tray.setContextMenu(
       Menu.buildFromTemplate([
-        { label: '打开主窗口', click: () => this.showMainWindow() },
+        { label: '打开主窗口', click: () => this.openMainWindow() },
         { label: '退出', click: () => this.quit() },
       ]),
     );
     this.tray.on('double-click', () => {
-      this.showMainWindow();
+      this.openMainWindow();
     });
-  }
-
-  private showMainWindow() {
-    if (!this.mainWindow || this.mainWindow.isDestroyed()) {
-      return;
-    }
-
-    this.mainWindow.show();
-    this.mainWindow.focus();
   }
 
   private quit() {
@@ -159,12 +233,19 @@ export class DesktopNotesController {
       return this.readSnapshot();
     }
 
-    const bounds = await this.resolveWindowBounds();
+    // 打开时先按有无贴纸决定尺寸，避免先铺开大窗口再收缩
+    const cache = await this.notesService.getCacheInfo();
+    const state = cache.exists ? await this.notesService.loadPersistedState() : createEmptyDesktopNotesState();
+    const bounds = this.boundsFromState(state);
+    this.normalBounds = bounds;
+    this.compactMode = state.notes.length === 0;
+    const initialBounds = this.compactMode ? this.compactBounds(bounds) : bounds;
+
     const notesWindow = new BrowserWindow({
-      width: bounds.width,
-      height: bounds.height,
-      x: bounds.x,
-      y: bounds.y,
+      width: initialBounds.width,
+      height: initialBounds.height,
+      x: initialBounds.x,
+      y: initialBounds.y,
       frame: false,
       transparent: true,
       resizable: false,
@@ -184,6 +265,8 @@ export class DesktopNotesController {
 
     notesWindow.setMenuBarVisibility(false);
     notesWindow.on('closed', () => {
+      // 窗口销毁后就不需要再恢复层级了
+      this.clearHighlightRestore();
       this.notesWindow = undefined;
       if (!this.quitting) {
         void this.setNotesWindowOpen(false);
@@ -310,7 +393,11 @@ export class DesktopNotesController {
       return;
     }
 
-    app.setLoginItemSettings({ openAtLogin: enabled });
+    app.setLoginItemSettings({
+      openAtLogin: enabled,
+      // 只有开机启动带参数，用户手动点击图标时仍显示主窗口
+      args: enabled ? [BACKGROUND_LAUNCH_ARG] : [],
+    });
   }
 
   private async updateContent(senderId: number, update: DesktopNotesContentUpdate) {
@@ -348,7 +435,9 @@ export class DesktopNotesController {
         : current.windowBounds,
     });
     this.pushStateToNotesWindow(savedState);
-    this.applyWindowBounds(savedState.windowBounds);
+    // 以保存后的贴纸数量决定窗口形态，删掉最后一张时立即收缩，避免先闪回大窗口
+    this.normalBounds = savedState.windowBounds;
+    this.applyCompact(savedState.notes.length === 0);
     const snapshot = await this.readSnapshot();
     this.publishSnapshot(snapshot);
     return snapshot;
@@ -362,23 +451,24 @@ export class DesktopNotesController {
     this.notesWindow.webContents.send(IPC_CHANNELS.desktopNotesApplyState, state);
   }
 
-  private applyWindowBounds(bounds: DesktopNotesWindowBounds | undefined) {
-    if (!bounds || !this.notesWindow || this.notesWindow.isDestroyed()) {
+  /** 空状态下的窗口范围：右下角锚点不动，收成刚好包住新建按钮的小方块 */
+  private compactBounds(normal: DesktopNotesWindowBounds): DesktopNotesWindowBounds {
+    const size = DESKTOP_NOTES_COMPACT_SIZE;
+    return {
+      width: size,
+      height: size,
+      x: normal.x + normal.width - size,
+      y: normal.y + normal.height - size,
+    };
+  }
+
+  private applyCompact(compact: boolean) {
+    if (!this.notesWindow || this.notesWindow.isDestroyed() || !this.normalBounds) {
       return;
     }
 
-    this.notesWindow.setBounds({
-      x: bounds.x,
-      y: bounds.y,
-      width: bounds.width,
-      height: bounds.height,
-    });
-  }
-
-  private async resolveWindowBounds(): Promise<DesktopNotesWindowBounds> {
-    const cache = await this.notesService.getCacheInfo();
-    const state = cache.exists ? await this.notesService.loadPersistedState() : createEmptyDesktopNotesState();
-    return this.boundsFromState(state);
+    this.compactMode = compact;
+    this.notesWindow.setBounds(compact ? this.compactBounds(this.normalBounds) : this.normalBounds);
   }
 
   private boundsFromState(state: DesktopNotesState): DesktopNotesWindowBounds {

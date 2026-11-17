@@ -1,4 +1,5 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { DESKTOP_NOTES_HIGHLIGHT_DURATION_MS } from '../../../shared/desktop-notes-state';
 import NoteSurface from './components/NoteSurface';
 import { useDesktopNotes } from './useDesktopNotes';
 import './index.less';
@@ -8,6 +9,11 @@ import './index.less';
  */
 export default function DesktopNotesPage() {
   const store = useDesktopNotes();
+  const [highlighting, setHighlighting] = useState(false);
+  const [highlightSize, setHighlightSize] = useState('');
+  const highlightTimerRef = useRef<number>();
+  const compactRef = useRef<boolean>();
+  const notesEmpty = store.ready ? (store.state?.notes.length ?? 0) === 0 : undefined;
 
   useEffect(() => {
     const style = document.createElement('style');
@@ -24,9 +30,56 @@ export default function DesktopNotesPage() {
     };
   }, []);
 
+  useEffect(() => {
+    const api = window.desktopNotes;
+    if (!api) {
+      return;
+    }
+
+    // 高亮只在本窗口渲染，用来向用户展示便利贴实际占用的桌面区域
+    const trigger = () => {
+      setHighlightSize(`${Math.round(window.innerWidth)} × ${Math.round(window.innerHeight)}`);
+      setHighlighting(true);
+      window.clearTimeout(highlightTimerRef.current);
+      highlightTimerRef.current = window.setTimeout(() => {
+        setHighlighting(false);
+        // 高亮结束立即回报主进程取消置顶，恢复窗口原有层级
+        void window.desktopNotes?.endBoundsHighlight();
+      }, DESKTOP_NOTES_HIGHLIGHT_DURATION_MS);
+    };
+
+    const stop = api.onBoundsHighlight(trigger);
+    // 窗口刚创建时高亮事件可能早于监听注册，挂载后主动领取一次
+    void api.takeBoundsHighlight().then((pending) => {
+      if (pending) {
+        trigger();
+      }
+    });
+
+    return () => {
+      stop();
+      window.clearTimeout(highlightTimerRef.current);
+    };
+  }, []);
+
+  // 没有贴纸时把窗口收成新建按钮大小，有贴纸时恢复用户设定的范围
+  useEffect(() => {
+    if (notesEmpty === undefined || compactRef.current === notesEmpty) {
+      return;
+    }
+
+    compactRef.current = notesEmpty;
+    void window.desktopNotes?.setCompact(notesEmpty);
+  }, [notesEmpty]);
+
   return (
     <main className="desktop-notes">
       {store.ready ? <NoteSurface store={store} /> : null}
+      {highlighting ? (
+        <div className="desktop-notes__highlight" aria-hidden>
+          <span className="desktop-notes__highlight-size">{highlightSize}</span>
+        </div>
+      ) : null}
     </main>
   );
 }

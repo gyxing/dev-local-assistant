@@ -67,6 +67,15 @@ contextBridge.exposeInMainWorld('desktopNotes', {
     ipcRenderer.invoke(IPC_CHANNELS.desktopNotesSaveRuntime, update),
   updateContent: (update: DesktopNotesContentUpdate) =>
     ipcRenderer.invoke(IPC_CHANNELS.desktopNotesUpdateContent, update),
+  highlightBounds: () => ipcRenderer.invoke(IPC_CHANNELS.desktopNotesHighlightBounds),
+  onBoundsHighlight: (handler: (durationMs: number) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, durationMs: number) => handler(durationMs);
+    ipcRenderer.on(IPC_CHANNELS.desktopNotesBoundsHighlight, listener);
+    return () => ipcRenderer.removeListener(IPC_CHANNELS.desktopNotesBoundsHighlight, listener);
+  },
+  takeBoundsHighlight: () => ipcRenderer.invoke(IPC_CHANNELS.desktopNotesTakeBoundsHighlight),
+  setCompact: (compact: boolean) => ipcRenderer.invoke(IPC_CHANNELS.desktopNotesSetCompact, compact),
+  endBoundsHighlight: () => ipcRenderer.invoke(IPC_CHANNELS.desktopNotesEndBoundsHighlight),
   onSnapshot: (handler: (snapshot: unknown) => void) => {
     const listener = (_event: Electron.IpcRendererEvent, snapshot: unknown) => handler(snapshot);
     ipcRenderer.on(IPC_CHANNELS.desktopNotesSnapshot, listener);
