@@ -4,6 +4,7 @@ import type {
   DesktopNotesRuntimeUpdate,
   DesktopNotesState,
 } from '../shared/desktop-notes-types';
+import type { CalendarTimeInfo, DesktopCalendarSettings } from '../shared/desktop-calendar-types';
 import type { PackageManagerName, PortUsageQuery } from '../shared/developer-tools-types';
 import type { HostsSaveRequest } from '../shared/network-tools-types';
 import type {
@@ -92,5 +93,26 @@ contextBridge.exposeInMainWorld('desktopNotes', {
     };
     ipcRenderer.on(IPC_CHANNELS.desktopNotesFlush, listener);
     return () => ipcRenderer.removeListener(IPC_CHANNELS.desktopNotesFlush, listener);
+  },
+});
+
+contextBridge.exposeInMainWorld('desktopCalendar', {
+  getSnapshot: () => ipcRenderer.invoke(IPC_CHANNELS.desktopCalendarGetSnapshot),
+  openWindow: () => ipcRenderer.invoke(IPC_CHANNELS.desktopCalendarOpenWindow),
+  closeWindow: () => ipcRenderer.invoke(IPC_CHANNELS.desktopCalendarCloseWindow),
+  saveSettings: (settings: DesktopCalendarSettings) =>
+    ipcRenderer.invoke(IPC_CHANNELS.desktopCalendarSaveSettings, settings),
+  getHolidays: (year: number) => ipcRenderer.invoke(IPC_CHANNELS.desktopCalendarGetHolidays, year),
+  getTime: () => ipcRenderer.invoke(IPC_CHANNELS.desktopCalendarGetTime),
+  syncTime: () => ipcRenderer.invoke(IPC_CHANNELS.desktopCalendarSyncTime),
+  onTimeChanged: (handler: (info: CalendarTimeInfo) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, info: CalendarTimeInfo) => handler(info);
+    ipcRenderer.on(IPC_CHANNELS.desktopCalendarTimeChanged, listener);
+    return () => ipcRenderer.removeListener(IPC_CHANNELS.desktopCalendarTimeChanged, listener);
+  },
+  onSettingsChanged: (handler: (settings: DesktopCalendarSettings) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, settings: DesktopCalendarSettings) => handler(settings);
+    ipcRenderer.on(IPC_CHANNELS.desktopCalendarSettingsChanged, listener);
+    return () => ipcRenderer.removeListener(IPC_CHANNELS.desktopCalendarSettingsChanged, listener);
   },
 });

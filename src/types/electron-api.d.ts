@@ -5,6 +5,12 @@ import type {
   DesktopNotesState,
 } from '../../shared/desktop-notes-types';
 import type {
+  CalendarHolidayYear,
+  CalendarTimeInfo,
+  DesktopCalendarSettings,
+  DesktopCalendarSnapshot,
+} from '../../shared/desktop-calendar-types';
+import type {
   KillProcessResult,
   PackageCacheCleanResult,
   PackageCacheItem,
@@ -77,10 +83,23 @@ export interface DesktopNotesApi {
   onFlushRequest: (handler: () => DesktopNotesState | undefined) => () => void;
 }
 
+export interface DesktopCalendarApi {
+  getSnapshot: () => Promise<DesktopCalendarSnapshot>;
+  openWindow: () => Promise<DesktopCalendarSnapshot>;
+  closeWindow: () => Promise<DesktopCalendarSnapshot>;
+  saveSettings: (settings: DesktopCalendarSettings) => Promise<DesktopCalendarSnapshot>;
+  getHolidays: (year: number) => Promise<CalendarHolidayYear>;
+  getTime: () => Promise<CalendarTimeInfo>;
+  syncTime: () => Promise<CalendarTimeInfo>;
+  onTimeChanged: (handler: (info: CalendarTimeInfo) => void) => () => void;
+  onSettingsChanged: (handler: (settings: DesktopCalendarSettings) => void) => () => void;
+}
+
 declare global {
   interface Window {
     clearNodeModules?: ClearNodeModulesApi;
     developerAssistant?: DeveloperAssistantApi;
     desktopNotes?: DesktopNotesApi;
+    desktopCalendar?: DesktopCalendarApi;
   }
 }

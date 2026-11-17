@@ -1,3 +1,5 @@
+import type { DesktopCalendarSettings } from './desktop-calendar-types';
+
 export type NodeModulesSource = 'package-json' | 'orphan-node-modules';
 
 export type DeleteMode = 'trash' | 'permanent';
@@ -62,6 +64,7 @@ export interface AppConfig {
   directoryHistory: DirectoryHistoryItem[];
   ignoredProjects: IgnoredProject[];
   runtime: AppRuntimePreferences;
+  calendar: DesktopCalendarSettings;
 }
 
 export type NodeModulesItemStatus =

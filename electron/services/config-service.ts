@@ -2,6 +2,11 @@ import { randomUUID } from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {
+  DEFAULT_DESKTOP_CALENDAR_SETTINGS,
+  normalizeDesktopCalendarSettings,
+} from '../../shared/desktop-calendar-state';
+import type { DesktopCalendarSettings } from '../../shared/desktop-calendar-types';
+import {
   DEFAULT_APP_RUNTIME_PREFERENCES,
   type AppConfig,
   type AppRuntimePreferences,
@@ -76,6 +81,7 @@ function createEmptyConfig(): AppConfig {
     directoryHistory: [],
     ignoredProjects: [],
     runtime: { ...DEFAULT_APP_RUNTIME_PREFERENCES },
+    calendar: { ...DEFAULT_DESKTOP_CALENDAR_SETTINGS },
   };
 }
 
@@ -133,7 +139,13 @@ function parseConfig(value: unknown): AppConfig {
     })
     .map(sanitizeIgnoredProject);
 
-  return { protectedProjects, directoryHistory, ignoredProjects, runtime: normalizeRuntime(value.runtime) };
+  return {
+    protectedProjects,
+    directoryHistory,
+    ignoredProjects,
+    runtime: normalizeRuntime(value.runtime),
+    calendar: normalizeDesktopCalendarSettings(value.calendar),
+  };
 }
 
 export class ConfigService {
@@ -166,6 +178,7 @@ export class ConfigService {
       directoryHistory: currentConfig.directoryHistory,
       ignoredProjects: currentConfig.ignoredProjects,
       runtime: currentConfig.runtime,
+      calendar: currentConfig.calendar,
     };
 
     return this.writeConfig(config);
@@ -187,6 +200,7 @@ export class ConfigService {
         .slice(0, MAX_DIRECTORY_HISTORY_COUNT),
       ignoredProjects: currentConfig.ignoredProjects,
       runtime: currentConfig.runtime,
+      calendar: currentConfig.calendar,
     };
 
     return this.writeConfig(config);
@@ -206,6 +220,7 @@ export class ConfigService {
       directoryHistory: currentConfig.directoryHistory,
       ignoredProjects: Array.from(uniqueProjects.values()),
       runtime: currentConfig.runtime,
+      calendar: currentConfig.calendar,
     };
 
     return this.writeConfig(config);
@@ -216,6 +231,14 @@ export class ConfigService {
     return this.writeConfig({
       ...currentConfig,
       runtime: normalizeRuntime(runtime),
+    });
+  }
+
+  async saveCalendarSettings(settings: DesktopCalendarSettings): Promise<AppConfig> {
+    const currentConfig = await this.getConfig();
+    return this.writeConfig({
+      ...currentConfig,
+      calendar: normalizeDesktopCalendarSettings(settings),
     });
   }
 

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { App, Typography } from 'antd';
 import {
   ApiOutlined,
+  CalendarOutlined,
   DatabaseOutlined,
   FolderOpenOutlined,
   GlobalOutlined,
@@ -9,6 +10,7 @@ import {
 } from '@ant-design/icons';
 import type { ReactNode } from 'react';
 import CleanerPage from '../node-modules-cleaner';
+import DesktopCalendarManager from './components/DesktopCalendarManager';
 import DesktopNotesManager from './components/DesktopNotesManager';
 import PackageCacheCleaner from './components/PackageCacheCleaner';
 import HostsManager from './components/HostsManager';
@@ -17,7 +19,13 @@ import './index.less';
 
 const { Title, Text } = Typography;
 
-type AssistantModule = 'node-modules' | 'package-cache' | 'port-manager' | 'hosts-manager' | 'desktop-notes';
+type AssistantModule =
+  | 'node-modules'
+  | 'package-cache'
+  | 'port-manager'
+  | 'hosts-manager'
+  | 'desktop-notes'
+  | 'desktop-calendar';
 
 // 固定侧栏模块顺序，避免新增工具后导航位置随渲染条件变化。
 const MODULE_NAV_ITEMS: Array<{
@@ -30,6 +38,7 @@ const MODULE_NAV_ITEMS: Array<{
   { key: 'port-manager', label: '端口管理', icon: <ApiOutlined /> },
   { key: 'hosts-manager', label: 'Hosts / DNS', icon: <GlobalOutlined /> },
   { key: 'desktop-notes', label: '桌面便利贴', icon: <PushpinOutlined /> },
+  { key: 'desktop-calendar', label: '桌面日历', icon: <CalendarOutlined /> },
 ];
 
 /**
@@ -114,6 +123,7 @@ export default function DeveloperAssistantPage() {
         {activeModule === 'port-manager' ? <PortManager /> : null}
         {activeModule === 'hosts-manager' ? <HostsManager onDirtyChange={setHostsDirty} /> : null}
         {activeModule === 'desktop-notes' ? <DesktopNotesManager /> : null}
+        {activeModule === 'desktop-calendar' ? <DesktopCalendarManager /> : null}
       </section>
     </main>
   );

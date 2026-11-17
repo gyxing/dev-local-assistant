@@ -8,6 +8,7 @@ export default defineConfig({
   routes: [
     { path: '/', component: '@/pages/developer-assistant' },
     { path: '/desktop-notes', component: '@/pages/desktop-notes' },
+    { path: '/desktop-calendar', component: '@/pages/desktop-calendar' },
   ],
   antd: {},
 });

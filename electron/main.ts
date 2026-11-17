@@ -1,8 +1,11 @@
 import path from 'node:path';
 import { app, BrowserWindow, dialog, ipcMain } from 'electron';
 import { BACKGROUND_LAUNCH_ARG, DesktopNotesController, getAppIconPath } from './desktop-notes-controller';
+import { DesktopCalendarController } from './desktop-calendar-controller';
 import { IPC_CHANNELS } from './ipc/channels';
 import { ConfigService } from './services/config-service';
+import { HolidayService } from './services/holiday-service';
+import { TimeService } from './services/time-service';
 import { DeleteService } from './services/delete-service';
 import { DnsService } from './services/dns-service';
 import { ElevationService } from './services/elevation-service';
@@ -26,6 +29,7 @@ import type {
 let mainWindow: BrowserWindow | undefined;
 let configService: ConfigService;
 let desktopNotesController: DesktopNotesController;
+let desktopCalendarController: DesktopCalendarController;
 let dnsService: DnsService;
 let hostsService: HostsService;
 const scanService = new ScanService();
@@ -398,13 +402,22 @@ if (!hasSingleInstanceLock) {
       getIconPath: getAppIconPath,
       openMainWindow: showMainWindow,
     });
+    desktopCalendarController = new DesktopCalendarController({
+      configService,
+      holidayService: new HolidayService(app.getPath('userData')),
+      timeService: new TimeService(),
+      getPreloadPath,
+      getRendererEntry,
+    });
     registerDialogHandlers();
     registerConfigHandlers();
     registerScanHandlers();
     registerDeleteHandlers();
     registerDeveloperToolsHandlers();
     desktopNotesController.registerIpc();
+    desktopCalendarController.registerIpc();
     await desktopNotesController.start({ background: isBackgroundLaunch });
+    await desktopCalendarController.start();
 
     if (!isBackgroundLaunch) {
       createWindow();
