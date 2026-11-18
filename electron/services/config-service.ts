@@ -226,11 +226,12 @@ export class ConfigService {
     return this.writeConfig(config);
   }
 
-  async saveRuntime(runtime: AppRuntimePreferences): Promise<AppConfig> {
+  /** 读取最新运行设置再合并字段，避免便签窗口与系统设置互相覆盖。 */
+  async saveRuntime(runtime: Partial<AppRuntimePreferences>): Promise<AppConfig> {
     const currentConfig = await this.getConfig();
     return this.writeConfig({
       ...currentConfig,
-      runtime: normalizeRuntime(runtime),
+      runtime: normalizeRuntime({ ...currentConfig.runtime, ...runtime }),
     });
   }
 
@@ -244,7 +245,15 @@ export class ConfigService {
 
   private async writeConfig(config: AppConfig): Promise<AppConfig> {
     await fs.mkdir(path.dirname(this.configPath), { recursive: true });
-    await fs.writeFile(this.configPath, JSON.stringify(config, null, 2), 'utf8');
+    const tempPath = `${this.configPath}.${randomUUID()}.tmp`;
+    try {
+      // 同目录替换，写入失败时保留原配置文件。
+      await fs.writeFile(tempPath, JSON.stringify(config, null, 2), { encoding: 'utf8', flag: 'wx' });
+      await fs.rename(tempPath, this.configPath);
+    } catch (error) {
+      await fs.unlink(tempPath).catch(() => undefined);
+      throw error;
+    }
     return config;
   }
 

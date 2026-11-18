@@ -12,8 +12,6 @@ export default function DesktopNotesPage() {
   const [highlighting, setHighlighting] = useState(false);
   const [highlightSize, setHighlightSize] = useState('');
   const highlightTimerRef = useRef<number>();
-  const compactRef = useRef<boolean>();
-  const notesEmpty = store.ready ? (store.state?.notes.length ?? 0) === 0 : undefined;
 
   useEffect(() => {
     const style = document.createElement('style');
@@ -43,8 +41,6 @@ export default function DesktopNotesPage() {
       window.clearTimeout(highlightTimerRef.current);
       highlightTimerRef.current = window.setTimeout(() => {
         setHighlighting(false);
-        // 高亮结束立即回报主进程取消置顶，恢复窗口原有层级
-        void window.desktopNotes?.endBoundsHighlight();
       }, DESKTOP_NOTES_HIGHLIGHT_DURATION_MS);
     };
 
@@ -61,16 +57,6 @@ export default function DesktopNotesPage() {
       window.clearTimeout(highlightTimerRef.current);
     };
   }, []);
-
-  // 没有贴纸时把窗口收成新建按钮大小，有贴纸时恢复用户设定的范围
-  useEffect(() => {
-    if (notesEmpty === undefined || compactRef.current === notesEmpty) {
-      return;
-    }
-
-    compactRef.current = notesEmpty;
-    void window.desktopNotes?.setCompact(notesEmpty);
-  }, [notesEmpty]);
 
   return (
     <main className="desktop-notes">

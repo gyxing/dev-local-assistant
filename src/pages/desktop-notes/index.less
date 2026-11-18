@@ -32,11 +32,26 @@
     padding: 18px;
   }
 
-  .surface-action {
+  .surface-actions {
     position: absolute;
     right: 18px;
     bottom: 18px;
     z-index: 1250;
+    display: flex;
+    gap: 8px;
+
+    // 空窗口只有 80 像素宽，需要缩窄按钮以保留两个操作入口。
+    &.is-compact {
+      right: 6px;
+      gap: 4px;
+
+      .surface-action {
+        width: 32px;
+      }
+    }
+  }
+
+  .surface-action {
     display: grid;
     width: 36px;
     height: 36px;

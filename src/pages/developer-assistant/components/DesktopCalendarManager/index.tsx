@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Button, Card, InputNumber, Segmented, Slider, Switch, Tag, Typography, message } from 'antd';
+import { Button, Card, InputNumber, Segmented, Select, Slider, Switch, Tag, Typography, message } from 'antd';
 import {
   ArrowDownOutlined,
   ArrowLeftOutlined,
@@ -65,13 +65,15 @@ export default function DesktopCalendarManager() {
     }
 
     let active = true;
+    let receivedPush = false;
     void api.getSnapshot().then((next) => {
-      if (active) {
+      if (active && !receivedPush) {
         setSnapshot(next);
       }
     });
-    const stop = api.onSettingsChanged((settings) => {
-      setSnapshot((current) => (current ? { ...current, settings } : current));
+    const stop = api.onSnapshot((next) => {
+      receivedPush = true;
+      setSnapshot(next);
     });
 
     return () => {
@@ -87,6 +89,7 @@ export default function DesktopCalendarManager() {
     }
 
     let active = true;
+    const stop = api.onTimeChanged(setTimeInfo);
     const refresh = () => {
       void api.getTime().then((info) => {
         if (active) {
@@ -100,6 +103,7 @@ export default function DesktopCalendarManager() {
 
     return () => {
       active = false;
+      stop();
       window.clearInterval(timer);
     };
   }, []);
@@ -130,7 +134,7 @@ export default function DesktopCalendarManager() {
 
     setSaving(true);
     try {
-      setSnapshot(await api.saveSettings({ ...snapshot.settings, ...patch }));
+      setSnapshot(await api.saveSettings(patch));
     } catch (error: unknown) {
       message.error(error instanceof Error ? error.message : '保存日历设置失败');
     } finally {
@@ -280,6 +284,16 @@ export default function DesktopCalendarManager() {
       <Card size="small" title="窗口">
         <div className="desktop-calendar-manager__window">
           <div className="desktop-calendar-manager__window-fields">
+            <label className="desktop-calendar-manager__field desktop-calendar-manager__field--display">
+              <span>显示器</span>
+              <Select
+                size="small"
+                value={snapshot?.activeDisplayId}
+                disabled={!apiAvailable}
+                options={(snapshot?.displays ?? []).map((display) => ({ value: display.id, label: display.label }))}
+                onChange={(value) => void saveSettings({ displayId: value })}
+              />
+            </label>
             <label className="desktop-calendar-manager__field">
               <span>宽度</span>
               <InputNumber

@@ -1,5 +1,6 @@
-import { PlusOutlined } from '@ant-design/icons';
-import { useMemo, useState } from 'react';
+import { DesktopOutlined, PlusOutlined } from '@ant-design/icons';
+import { message } from 'antd';
+import { useEffect, useMemo, useState } from 'react';
 import type { DesktopNote } from '../../../../../shared/desktop-notes-types';
 import { computeVisibleNotes } from '../../visible-notes';
 import type { useDesktopNotes } from '../../useDesktopNotes';
@@ -17,12 +18,34 @@ export default function NoteSurface({ store }: NoteSurfaceProps) {
   const [overflowOpen, setOverflowOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [activeMenuNoteId, setActiveMenuNoteId] = useState<string>();
+  const [switchingMode, setSwitchingMode] = useState(false);
+  const readOnly = store.desktopModeActive || store.paused;
   const notes = store.state?.notes ?? [];
   const settings = store.state?.settings;
   const groups = useMemo(
     () => (settings ? computeVisibleNotes(notes, settings) : { visible: [], hidden: [] }),
     [notes, settings],
   );
+
+  useEffect(() => {
+    if (store.desktopModeActive) {
+      setOverflowOpen(false);
+      setSettingsOpen(false);
+      setActiveMenuNoteId(undefined);
+    }
+  }, [store.desktopModeActive]);
+
+  async function enterDesktopMode() {
+    if (!window.desktopNotes) return;
+    setSwitchingMode(true);
+    try {
+      await window.desktopNotes.setDesktopMode(true);
+    } catch (error) {
+      void message.error(error instanceof Error ? error.message : '切换桌面模式失败');
+    } finally {
+      setSwitchingMode(false);
+    }
+  }
 
   function restoreHiddenNote(note: DesktopNote) {
     store.bringNoteToFront(note.id);
@@ -36,15 +59,31 @@ export default function NoteSurface({ store }: NoteSurfaceProps) {
   return (
     <>
       <section className="note-surface" aria-label="桌面贴纸">
-        <button className="surface-action" type="button" aria-label="新建贴纸" onClick={store.addNote}>
-          <PlusOutlined />
-        </button>
+        {!store.desktopModeActive ? (
+          <div className={`surface-actions${notes.length === 0 ? ' is-compact' : ''}`}>
+            <button className="surface-action" type="button" aria-label="新建贴纸" disabled={readOnly} onClick={store.addNote}>
+              <PlusOutlined />
+            </button>
+            <button
+              className="surface-action"
+              type="button"
+              title="切换到桌面模式"
+              aria-label="切换到桌面模式"
+              disabled={readOnly || switchingMode}
+              onClick={() => void enterDesktopMode()}
+            >
+              <DesktopOutlined />
+            </button>
+          </div>
+        ) : null}
 
         {groups.visible.map((note) => (
           <StickyNote
             key={note.id}
             note={note}
             settings={settings}
+            readOnly={readOnly}
+            registerFlushHandler={store.registerFlushHandler}
             isMenuOpen={activeMenuNoteId === note.id}
             onToggleMenu={() => setActiveMenuNoteId(activeMenuNoteId === note.id ? undefined : note.id)}
             onChange={store.updateNote}
@@ -57,17 +96,17 @@ export default function NoteSurface({ store }: NoteSurfaceProps) {
         ))}
       </section>
 
-      {groups.hidden.length > 0 ? (
+      {!readOnly && groups.hidden.length > 0 ? (
         <OverflowTag
           count={groups.hidden.length}
           active={overflowOpen}
           onClick={() => setOverflowOpen((current) => !current)}
         />
       ) : null}
-      {overflowOpen ? (
+      {!readOnly && overflowOpen ? (
         <OverflowPanel notes={groups.hidden} maxLines={settings.maxLinesPerNote} onSelect={restoreHiddenNote} />
       ) : null}
-      {settingsOpen ? (
+      {!readOnly && settingsOpen ? (
         <SettingsPopover
           settings={settings}
           onChange={store.updateSettings}

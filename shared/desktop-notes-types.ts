@@ -1,4 +1,4 @@
-import type { AppRuntimePreferences } from './task-types';
+import type { DisplayInfo } from './display-types';
 
 /** 单张桌面贴纸。坐标相对于便利贴窗口左上角。 */
 export interface DesktopNote {
@@ -34,6 +34,8 @@ export interface DesktopNotesWindowBounds {
 
 /** 便利贴窗口内的显示设置。 */
 export interface DesktopNoteSettings {
+  /** 由主进程单独保存的桌面模式偏好。 */
+  desktopMode: boolean;
   maxVisibleNotes: number;
   maxLinesPerNote: number;
   showPinnedOnly: boolean;
@@ -47,6 +49,8 @@ export interface DesktopNotesState {
   notes: DesktopNote[];
   settings: DesktopNoteSettings;
   windowBounds?: DesktopNotesWindowBounds;
+  /** 窗口所在显示器；缺省表示主屏 */
+  displayId?: string;
 }
 
 /** 本地缓存文件的可见信息。便利贴没有独立缓存目录，这份 JSON 就是缓存。 */
@@ -57,28 +61,31 @@ export interface DesktopNotesCacheInfo {
   updatedAt?: number;
 }
 
-export interface DesktopNotesSnapshot {
-  windowOpen: boolean;
+export interface DesktopNotesWindowState {
   state: DesktopNotesState;
+  /** 窗口实际应用的模式，置底失败时可能与已保存偏好不同。 */
+  desktopModeActive: boolean;
+}
+
+export interface DesktopNotesSnapshot extends DesktopNotesWindowState {
+  windowOpen: boolean;
   /** 当前生效的窗口位置。未保存过时使用右下角默认值。 */
   windowBounds: DesktopNotesWindowBounds;
-  /** 当前主屏幕工作区，用来把位置说成人话并计算四个角。 */
+  /** 当前窗口所在显示器的工作区，用来把位置说成人话并计算四个角。 */
   workArea: DesktopNotesWorkArea;
+  /** 所有显示器，供管理页切换 */
+  displays: DisplayInfo[];
+  /** 窗口当前所在显示器 id */
+  activeDisplayId: string;
   cache: DesktopNotesCacheInfo;
-  runtime: AppRuntimePreferences;
-  packaged: boolean;
 }
 
 /** 工具页提交的便利贴内容变更。主进程先落盘窗口内未保存的编辑，再合并这项变更。 */
 export interface DesktopNotesContentUpdate {
-  settings?: Partial<DesktopNoteSettings>;
+  settings?: Partial<Omit<DesktopNoteSettings, 'desktopMode'>>;
   windowBounds?: DesktopNotesWindowBounds;
+  /** 切换显示器；主进程会把窗口移到该屏右下角 */
+  displayId?: string;
   note?: Pick<DesktopNote, 'id' | 'text' | 'pinned'>;
   deleteNoteId?: string;
-}
-
-/** 工具页可以修改的运行开关。便利贴窗口开关由打开和关闭操作维护。 */
-export interface DesktopNotesRuntimeUpdate {
-  launchAtLogin?: boolean;
-  quitWhenMainWindowCloses?: boolean;
 }

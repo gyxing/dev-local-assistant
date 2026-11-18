@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type PointerEvent } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent } from 'react';
 import type { DesktopNote, DesktopNoteSettings } from '../../../../../shared/desktop-notes-types';
 
 type UpdateNoteInput = Partial<Omit<DesktopNote, 'id' | 'createdAt'>> & { id: string };
@@ -6,6 +6,8 @@ type UpdateNoteInput = Partial<Omit<DesktopNote, 'id' | 'createdAt'>> & { id: st
 interface StickyNoteProps {
   note: DesktopNote;
   settings: DesktopNoteSettings;
+  readOnly: boolean;
+  registerFlushHandler: (commit: () => void) => () => void;
   isMenuOpen: boolean;
   onToggleMenu: () => void;
   onChange: (input: UpdateNoteInput) => void;
@@ -14,6 +16,7 @@ interface StickyNoteProps {
 }
 
 interface DragState {
+  pointerId: number;
   startX: number;
   startY: number;
   noteX: number;
@@ -30,6 +33,8 @@ interface DragState {
 export default function StickyNote({
   note,
   settings,
+  readOnly,
+  registerFlushHandler,
   isMenuOpen,
   onToggleMenu,
   onChange,
@@ -43,10 +48,10 @@ export default function StickyNote({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    if (editing) {
+    if (editing && !readOnly) {
       textareaRef.current?.focus();
     }
-  }, [editing]);
+  }, [editing, readOnly]);
 
   useEffect(() => {
     if (!editing) {
@@ -56,8 +61,9 @@ export default function StickyNote({
 
   function saveDraft() {
     setEditing(false);
-    if (draft.trim() !== note.text) {
-      onChange({ id: note.id, text: draft.trim() || '空白贴纸' });
+    const text = (textareaRef.current?.value ?? draft).trim() || '空白贴纸';
+    if (text !== note.text) {
+      onChange({ id: note.id, text });
     }
   }
 
@@ -74,6 +80,7 @@ export default function StickyNote({
 
     event.currentTarget.setPointerCapture(event.pointerId);
     setDragState({
+      pointerId: event.pointerId,
       startX: event.clientX,
       startY: event.clientY,
       noteX: note.x,
@@ -101,6 +108,9 @@ export default function StickyNote({
       onChange({ id: note.id, x: dragState.latestX, y: dragState.latestY });
     }
 
+    if (dragState && noteRef.current?.hasPointerCapture(dragState.pointerId)) {
+      noteRef.current.releasePointerCapture(dragState.pointerId);
+    }
     setDragState(undefined);
   }
 
@@ -109,6 +119,12 @@ export default function StickyNote({
       onToggleMenu();
     }
   }
+
+  useLayoutEffect(() => registerFlushHandler(() => {
+    if (editing) saveDraft();
+    if (dragState) endDrag();
+    closeMenu();
+  }));
 
   return (
     <article
@@ -122,20 +138,20 @@ export default function StickyNote({
         opacity: settings.opacity,
         fontSize: settings.fontSize,
       }}
-      onDoubleClick={() => {
+      onDoubleClick={readOnly ? undefined : () => {
         closeMenu();
         setEditing(true);
       }}
-      onContextMenu={(event) => {
+      onContextMenu={readOnly ? undefined : (event) => {
         event.preventDefault();
         onToggleMenu();
       }}
-      onPointerDown={startDrag}
-      onPointerMove={moveDrag}
-      onPointerUp={endDrag}
-      onPointerCancel={endDrag}
+      onPointerDown={readOnly ? undefined : startDrag}
+      onPointerMove={readOnly ? undefined : moveDrag}
+      onPointerUp={readOnly ? undefined : endDrag}
+      onPointerCancel={readOnly ? undefined : endDrag}
     >
-      {editing ? (
+      {editing && !readOnly ? (
         <textarea
           ref={textareaRef}
           className="note-editor"
@@ -159,7 +175,7 @@ export default function StickyNote({
         </p>
       )}
 
-      {isMenuOpen ? (
+      {!readOnly && isMenuOpen ? (
         <div className="note-menu" onPointerDown={(event) => event.stopPropagation()}>
           <button
             type="button"

@@ -1,4 +1,5 @@
 import { app } from 'electron';
+import { randomUUID } from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {
@@ -42,8 +43,10 @@ export function normalizeDesktopNotesState(value: unknown): DesktopNotesState {
     schemaVersion: DESKTOP_NOTES_SCHEMA_VERSION,
     notes,
     windowBounds,
+    displayId: typeof value.displayId === 'string' ? value.displayId : undefined,
     settings: normalizeDesktopNoteSettings({
       ...DEFAULT_DESKTOP_NOTE_SETTINGS,
+      desktopMode: settings.desktopMode === true,
       maxVisibleNotes: typeof settings.maxVisibleNotes === 'number' ? settings.maxVisibleNotes : undefined,
       maxLinesPerNote: typeof settings.maxLinesPerNote === 'number' ? settings.maxLinesPerNote : undefined,
       showPinnedOnly: settings.showPinnedOnly === true,
@@ -55,6 +58,7 @@ export function normalizeDesktopNotesState(value: unknown): DesktopNotesState {
 
 export class DesktopNotesService {
   private readonly filePath: string;
+  private pendingWrite: Promise<unknown> = Promise.resolve();
 
   constructor(userDataPath: string) {
     this.filePath = path.join(userDataPath, STATE_FILE_NAME);
@@ -62,35 +66,44 @@ export class DesktopNotesService {
 
   /** 便利贴窗口读取状态。没有文件时返回一张默认贴纸。 */
   async loadState(): Promise<DesktopNotesState> {
+    return this.readState(createDefaultDesktopNotesState);
+  }
+
+  private async readState(onMissing: () => DesktopNotesState): Promise<DesktopNotesState> {
     try {
       const content = await fs.readFile(this.filePath, 'utf8');
       return normalizeDesktopNotesState(JSON.parse(content));
-    } catch {
-      return createDefaultDesktopNotesState();
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return onMissing();
+      if (error instanceof SyntaxError) return createDefaultDesktopNotesState();
+      throw error;
     }
   }
 
-  async saveState(state: DesktopNotesState): Promise<DesktopNotesState> {
-    const normalizedState = normalizeDesktopNotesState(state);
-    if (!normalizedState.windowBounds) {
-      const previousBounds = await this.readStoredBounds();
-      if (previousBounds) {
-        normalizedState.windowBounds = previousBounds;
-      }
-    }
+  /** 按顺序读取最新文件并合并，返回已保存的状态。 */
+  updateState(
+    update: (current: DesktopNotesState) => DesktopNotesState,
+    onMissing = createDefaultDesktopNotesState,
+  ): Promise<DesktopNotesState> {
+    const task = this.pendingWrite.then(async () => {
+      const state = normalizeDesktopNotesState(update(await this.readState(onMissing)));
+      await this.writeState(state);
+      return state;
+    });
+    this.pendingWrite = task.catch(() => undefined);
+    return task;
+  }
 
+  private async writeState(state: DesktopNotesState) {
     await fs.mkdir(path.dirname(this.filePath), { recursive: true });
-    await fs.writeFile(this.filePath, JSON.stringify(normalizedState, null, 2), 'utf8');
-    return normalizedState;
-  }
-
-  /** 贴纸窗口保存时可能还没有窗口尺寸，保留文件里已经管理过的位置。 */
-  private async readStoredBounds() {
+    const tempPath = `${this.filePath}.${randomUUID()}.tmp`;
     try {
-      const content = await fs.readFile(this.filePath, 'utf8');
-      return normalizeDesktopNotesState(JSON.parse(content)).windowBounds;
-    } catch {
-      return undefined;
+      // 同目录替换保证读者只会看到完整的 JSON。
+      await fs.writeFile(tempPath, JSON.stringify(state, null, 2), { encoding: 'utf8', flag: 'wx' });
+      await fs.rename(tempPath, this.filePath);
+    } catch (error) {
+      await fs.unlink(tempPath).catch(() => undefined);
+      throw error;
     }
   }
 
@@ -113,13 +126,8 @@ export class DesktopNotesService {
   }
 
   /** 工具页在文件尚未创建时不展示默认贴纸，避免把内存数据当成已保存数据。 */
-  async loadPersistedState(): Promise<DesktopNotesState> {
-    const cache = await this.getCacheInfo();
-    if (!cache.exists) {
-      return createEmptyDesktopNotesState();
-    }
-
-    return this.loadState();
+  loadPersistedState(): Promise<DesktopNotesState> {
+    return this.readState(createEmptyDesktopNotesState);
   }
 }
 

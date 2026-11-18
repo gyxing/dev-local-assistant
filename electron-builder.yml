@@ -17,6 +17,8 @@ extraResources:
     to: desktop-layer.ps1
   - from: build/icon.ico
     to: icon.ico
+  - from: electron/resources/tray-icons
+    to: tray-icons
 
 # 只打包应用实际使用的 Chromium 语言资源，去掉其余 53 个 pak（约 47 MB 未压缩体积）
 electronLanguages:

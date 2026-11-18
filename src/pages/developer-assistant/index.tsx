@@ -7,6 +7,7 @@ import {
   FolderOpenOutlined,
   GlobalOutlined,
   PushpinOutlined,
+  SettingOutlined,
 } from '@ant-design/icons';
 import type { ReactNode } from 'react';
 import CleanerPage from '../node-modules-cleaner';
@@ -15,6 +16,7 @@ import DesktopNotesManager from './components/DesktopNotesManager';
 import PackageCacheCleaner from './components/PackageCacheCleaner';
 import HostsManager from './components/HostsManager';
 import PortManager from './components/PortManager';
+import SystemSettings from './components/SystemSettings';
 import './index.less';
 
 const { Title, Text } = Typography;
@@ -25,7 +27,8 @@ type AssistantModule =
   | 'port-manager'
   | 'hosts-manager'
   | 'desktop-notes'
-  | 'desktop-calendar';
+  | 'desktop-calendar'
+  | 'system-settings';
 
 // 固定侧栏模块顺序，避免新增工具后导航位置随渲染条件变化。
 const MODULE_NAV_ITEMS: Array<{
@@ -39,6 +42,7 @@ const MODULE_NAV_ITEMS: Array<{
   { key: 'hosts-manager', label: 'Hosts / DNS', icon: <GlobalOutlined /> },
   { key: 'desktop-notes', label: '桌面便利贴', icon: <PushpinOutlined /> },
   { key: 'desktop-calendar', label: '桌面日历', icon: <CalendarOutlined /> },
+  { key: 'system-settings', label: '系统设置', icon: <SettingOutlined /> },
 ];
 
 /**
@@ -124,6 +128,7 @@ export default function DeveloperAssistantPage() {
         {activeModule === 'hosts-manager' ? <HostsManager onDirtyChange={setHostsDirty} /> : null}
         {activeModule === 'desktop-notes' ? <DesktopNotesManager /> : null}
         {activeModule === 'desktop-calendar' ? <DesktopCalendarManager /> : null}
+        {activeModule === 'system-settings' ? <SystemSettings /> : null}
       </section>
     </main>
   );

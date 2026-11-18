@@ -1,7 +1,7 @@
 {
   "name": "devbox",
   "productName": "开发者工具箱",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "面向开发者的本地效率工具集",
   "private": true,
   "packageManager": "pnpm@11.10.0",

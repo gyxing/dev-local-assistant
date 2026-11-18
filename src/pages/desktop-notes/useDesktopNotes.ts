@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { message } from 'antd';
 import {
   clampDesktopNoteNumber,
   getNextNoteColor,
   normalizeDesktopNoteSettings,
 } from '../../../shared/desktop-notes-state';
-import type { DesktopNote, DesktopNoteSettings, DesktopNotesState } from '../../../shared/desktop-notes-types';
+import type { DesktopNote, DesktopNoteSettings, DesktopNotesState, DesktopNotesWindowState } from '../../../shared/desktop-notes-types';
 
 const SAVE_DELAY_MS = 250;
 
@@ -13,10 +14,28 @@ type UpdateNoteInput = Partial<Omit<DesktopNote, 'id' | 'createdAt'>> & { id: st
 export function useDesktopNotes() {
   const [ready, setReady] = useState(false);
   const [state, setState] = useState<DesktopNotesState>();
+  const [desktopModeActive, setDesktopModeActive] = useState(false);
+  const [paused, setPaused] = useState(false);
   const stateRef = useRef<DesktopNotesState>();
   const saveTimerRef = useRef<number>();
-  const loadedRef = useRef(false);
-  stateRef.current = state;
+  const pausedRef = useRef(false);
+  const desktopModeRef = useRef(false);
+  const dirtyRef = useRef(false);
+  const flushHandlers = useRef(new Set<() => void>());
+
+  const scheduleSave = useCallback(() => {
+    window.clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = window.setTimeout(() => {
+      const current = stateRef.current;
+      if (current && dirtyRef.current && !pausedRef.current && !desktopModeRef.current) {
+        void window.desktopNotes?.saveState(current).then(() => {
+          if (stateRef.current === current) {
+            dirtyRef.current = false;
+          }
+        }).catch(() => message.error('便利贴保存失败，请重试'));
+      }
+    }, SAVE_DELAY_MS);
+  }, []);
 
   useEffect(() => {
     const api = window.desktopNotes;
@@ -26,51 +45,66 @@ export function useDesktopNotes() {
     }
 
     let active = true;
-    void api.loadState().then((loadedState) => {
-      if (!active) {
-        return;
-      }
-
-      loadedRef.current = true;
-      setState(loadedState);
+    let receivedPush = false;
+    const apply = (next: DesktopNotesWindowState) => {
+      window.clearTimeout(saveTimerRef.current);
+      dirtyRef.current = false;
+      desktopModeRef.current = next.desktopModeActive;
+      stateRef.current = next.state;
+      setDesktopModeActive(next.desktopModeActive);
+      setState(next.state);
       setReady(true);
+    };
+    const stopApply = api.onApplyState((next) => {
+      receivedPush = true;
+      apply(next);
     });
-
-    const stopApply = api.onApplyState((nextState) => {
-      loadedRef.current = true;
-      setState(nextState);
-      setReady(true);
+    void api.loadState().then((loaded) => {
+      if (active && !receivedPush) {
+        apply(loaded);
+      }
+    }).catch(() => {
+      if (active) void message.error('读取便利贴失败');
     });
     const stopFlush = api.onFlushRequest(() => {
+      // 草稿位于贴纸组件内，先同步提交到 ref，避免读到上一轮渲染的状态。
+      flushHandlers.current.forEach((commit) => commit());
+      pausedRef.current = true;
+      setPaused(true);
       window.clearTimeout(saveTimerRef.current);
       return stateRef.current;
+    });
+    const stopResume = api.onResumeEdits(() => {
+      pausedRef.current = false;
+      setPaused(false);
+      if (dirtyRef.current) {
+        scheduleSave();
+      }
     });
 
     return () => {
       active = false;
       stopApply();
       stopFlush();
+      stopResume();
       window.clearTimeout(saveTimerRef.current);
     };
-  }, []);
-
-  useEffect(() => {
-    if (!loadedRef.current || !state || !window.desktopNotes) {
-      return;
-    }
-
-    window.clearTimeout(saveTimerRef.current);
-    saveTimerRef.current = window.setTimeout(() => {
-      void window.desktopNotes?.saveState(state);
-    }, SAVE_DELAY_MS);
-
-    return () => {
-      window.clearTimeout(saveTimerRef.current);
-    };
-  }, [state]);
+  }, [scheduleSave]);
 
   const updateState = useCallback((updater: (current: DesktopNotesState) => DesktopNotesState) => {
-    setState((current) => (current ? updater(current) : current));
+    const current = stateRef.current;
+    if (current && !pausedRef.current && !desktopModeRef.current) {
+      const next = updater(current);
+      stateRef.current = next;
+      setState(next);
+      dirtyRef.current = true;
+      scheduleSave();
+    }
+  }, [scheduleSave]);
+
+  const registerFlushHandler = useCallback((commit: () => void) => {
+    flushHandlers.current.add(commit);
+    return () => { flushHandlers.current.delete(commit); };
   }, []);
 
   const addNote = useCallback(() => {
@@ -170,6 +204,9 @@ export function useDesktopNotes() {
   return {
     ready,
     state,
+    desktopModeActive,
+    paused,
+    registerFlushHandler,
     addNote,
     updateNote,
     deleteNote,

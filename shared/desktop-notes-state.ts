@@ -15,6 +15,7 @@ export const DESKTOP_NOTES_HIGHLIGHT_DURATION_MS = 3000;
 export const DESKTOP_NOTES_COMPACT_SIZE = 80;
 
 export const DEFAULT_DESKTOP_NOTE_SETTINGS: DesktopNoteSettings = {
+  desktopMode: false,
   maxVisibleNotes: 12,
   maxLinesPerNote: 3,
   showPinnedOnly: false,
@@ -65,6 +66,7 @@ export function clampDesktopNoteNumber(value: number, min: number, max: number) 
 
 export function normalizeDesktopNoteSettings(settings: Partial<DesktopNoteSettings>): DesktopNoteSettings {
   return {
+    desktopMode: settings.desktopMode === true,
     maxVisibleNotes: clampDesktopNoteNumber(
       settings.maxVisibleNotes ?? DEFAULT_DESKTOP_NOTE_SETTINGS.maxVisibleNotes,
       1,

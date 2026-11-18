@@ -1,7 +1,4 @@
-import { execFile } from 'node:child_process';
-import path from 'node:path';
-import { promisify } from 'node:util';
-import { app, BrowserWindow, ipcMain, screen } from 'electron';
+import { BrowserWindow, ipcMain, screen } from 'electron';
 import {
   CALENDAR_UNPOSITIONED,
   DEFAULT_DESKTOP_CALENDAR_SETTINGS,
@@ -14,11 +11,16 @@ import type {
 } from '../shared/desktop-calendar-types';
 import { IPC_CHANNELS } from './ipc/channels';
 import { ConfigService } from './services/config-service';
+import {
+  getDisplayInfo,
+  getDisplayWorkArea,
+  getPrimaryDisplayId,
+  isDisplayAvailable,
+  listDisplays,
+} from './services/display-service';
 import { HolidayService } from './services/holiday-service';
 import { TimeService } from './services/time-service';
-
-const execFileAsync = promisify(execFile);
-const BOTTOM_SCRIPT_TIMEOUT_MS = 5000;
+import { sendWindowToBottom } from './services/window-layer-service';
 
 interface DesktopCalendarControllerOptions {
   configService: ConfigService;
@@ -26,6 +28,8 @@ interface DesktopCalendarControllerOptions {
   timeService: TimeService;
   getPreloadPath: () => string;
   getRendererEntry: () => string;
+  saveCalendarSettings: ConfigService['saveCalendarSettings'];
+  reportError: (error: unknown) => void;
 }
 
 /**
@@ -38,8 +42,13 @@ export class DesktopCalendarController {
   private readonly timeService: TimeService;
   private readonly getPreloadPath: () => string;
   private readonly getRendererEntry: () => string;
+  private readonly writeSettings: ConfigService['saveCalendarSettings'];
+  private readonly reportError: (error: unknown) => void;
+  private mainWindow?: BrowserWindow;
   private window?: BrowserWindow;
   private settings: DesktopCalendarSettings = { ...DEFAULT_DESKTOP_CALENDAR_SETTINGS };
+  private pendingSettings: Promise<unknown> = Promise.resolve();
+  private onStateChanged?: () => void;
 
   constructor(options: DesktopCalendarControllerOptions) {
     this.configService = options.configService;
@@ -47,6 +56,8 @@ export class DesktopCalendarController {
     this.timeService = options.timeService;
     this.getPreloadPath = options.getPreloadPath;
     this.getRendererEntry = options.getRendererEntry;
+    this.writeSettings = options.saveCalendarSettings;
+    this.reportError = options.reportError;
   }
 
   async start() {
@@ -59,23 +70,67 @@ export class DesktopCalendarController {
 
     // 网络校时不阻塞窗口显示，失败时保留本机时间
     void this.timeService.start();
+
+    // 显示器被拔掉时把窗口收回主屏
+    screen.on('display-removed', () => {
+      void this.runSettingsAction(() => this.handleDisplayRemoved()).catch(this.reportError);
+    });
   }
 
   registerIpc() {
     ipcMain.handle(IPC_CHANNELS.desktopCalendarGetSnapshot, () => this.readSnapshot());
-    ipcMain.handle(IPC_CHANNELS.desktopCalendarOpenWindow, () => this.openWindow());
-    ipcMain.handle(IPC_CHANNELS.desktopCalendarCloseWindow, () => this.closeWindow());
-    ipcMain.handle(IPC_CHANNELS.desktopCalendarSaveSettings, (_, settings: DesktopCalendarSettings) =>
-      this.saveSettings(settings),
+    ipcMain.handle(IPC_CHANNELS.desktopCalendarOpenWindow, () => this.updateSettings({ enabled: true }));
+    ipcMain.handle(IPC_CHANNELS.desktopCalendarCloseWindow, () => this.updateSettings({ enabled: false }));
+    ipcMain.handle(IPC_CHANNELS.desktopCalendarSaveSettings, (_, patch: Partial<DesktopCalendarSettings>) =>
+      this.updateSettings(patch),
     );
     ipcMain.handle(IPC_CHANNELS.desktopCalendarGetHolidays, (_, year: number) => this.getHolidays(year));
     ipcMain.handle(IPC_CHANNELS.desktopCalendarGetTime, () => this.timeService.getInfo());
-    ipcMain.handle(IPC_CHANNELS.desktopCalendarSyncTime, async () => {
-      const info = await this.timeService.sync();
-      // 手动校时后立刻通知日历窗口，不必等下一次轮询
-      this.window?.webContents.send(IPC_CHANNELS.desktopCalendarTimeChanged, info);
-      return info;
-    });
+    ipcMain.handle(IPC_CHANNELS.desktopCalendarSyncTime, () => this.syncTime());
+  }
+
+  attachMainWindow(window: BrowserWindow) {
+    this.mainWindow = window;
+  }
+
+  setOnStateChanged(callback: () => void) {
+    this.onStateChanged = callback;
+  }
+
+  getTrayState() {
+    return {
+      windowOpen: Boolean(this.window && !this.window.isDestroyed()),
+      darkTheme: this.settings.theme === 'dark',
+    };
+  }
+
+  toggleWindow() {
+    return this.runSettingsAction(() => this.applySettings({ enabled: !this.getTrayState().windowOpen }));
+  }
+
+  toggleTheme() {
+    return this.runSettingsAction(() => this.applySettings({
+      theme: this.settings.theme === 'dark' ? 'light' : 'dark',
+    }));
+  }
+
+  /** 两个入口共享校时结果，管理页和日历窗口无需等待轮询。 */
+  async syncTime() {
+    const info = await this.timeService.sync();
+    if (this.window && !this.window.isDestroyed()) {
+      this.window.webContents.send(IPC_CHANNELS.desktopCalendarTimeChanged, info);
+    }
+    if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+      this.mainWindow.webContents.send(IPC_CHANNELS.desktopCalendarTimeChanged, info);
+    }
+    return info;
+  }
+
+  /** 将托盘和管理页的配置变更按到达顺序应用。 */
+  private runSettingsAction<T>(apply: () => Promise<T>): Promise<T> {
+    const task = this.pendingSettings.then(apply);
+    this.pendingSettings = task.catch(() => undefined);
+    return task;
   }
 
   private async getHolidays(year: number): Promise<CalendarHolidayYear> {
@@ -86,22 +141,42 @@ export class DesktopCalendarController {
     return this.holidayService.getYear(year);
   }
 
-  private async saveSettings(settings: DesktopCalendarSettings): Promise<DesktopCalendarSnapshot> {
-    const config = await this.configService.saveCalendarSettings(settings);
-    this.settings = config.calendar;
+  private updateSettings(patch: Partial<DesktopCalendarSettings>) {
+    return this.runSettingsAction(() => this.applySettings(patch));
+  }
 
-    if (!this.settings.enabled) {
+  private async applySettings(patch: Partial<DesktopCalendarSettings>): Promise<DesktopCalendarSnapshot> {
+    const previous = this.settings;
+    const nextSettings = normalizeDesktopCalendarSettings({ ...previous, ...patch });
+    // 切换显示器后回到新屏右上角，避免沿用旧屏坐标
+    if (nextSettings.displayId !== this.settings.displayId) {
+      nextSettings.x = CALENDAR_UNPOSITIONED;
+      nextSettings.y = CALENDAR_UNPOSITIONED;
+    }
+
+    const needsWindow = patch.enabled === true && !this.getTrayState().windowOpen;
+    this.settings = nextSettings;
+    try {
+      if (needsWindow) {
+        await this.openWindow();
+      }
+      const config = await this.writeSettings(nextSettings);
+      this.settings = config.calendar;
+    } catch (error) {
+      this.settings = previous;
+      if (needsWindow) {
+        this.destroyWindow();
+      }
+      this.publishSnapshot();
+      throw error;
+    }
+
+    if (this.settings.enabled) {
+      this.applyWindowSettings();
+    } else {
       this.destroyWindow();
-      return this.readSnapshot();
     }
-
-    if (!this.window || this.window.isDestroyed()) {
-      await this.openWindow();
-      return this.readSnapshot();
-    }
-
-    this.applyWindowSettings();
-    return this.readSnapshot();
+    return this.publishSnapshot();
   }
 
   private applyWindowSettings() {
@@ -114,17 +189,18 @@ export class DesktopCalendarController {
     window.webContents.send(IPC_CHANNELS.desktopCalendarSettingsChanged, this.settings);
   }
 
-  /** 未定位时放到主屏右侧垂直居中；已定位时限制在当前工作区内。 */
+  /** 未定位时放到所选显示器右上角；已定位时限制在该显示器工作区内。 */
   private resolveBounds() {
     const { width, height } = this.settings;
-    const workArea = screen.getPrimaryDisplay().workArea;
+    const workArea = getDisplayWorkArea(this.settings.displayId);
+    const margin = 40;
 
     if (this.settings.x === CALENDAR_UNPOSITIONED || this.settings.y === CALENDAR_UNPOSITIONED) {
       return {
         width,
         height,
-        x: workArea.x + Math.max(0, workArea.width - width - 40),
-        y: workArea.y + Math.max(0, Math.round((workArea.height - height) / 2)),
+        x: workArea.x + Math.max(0, workArea.width - width - margin),
+        y: workArea.y + margin,
       };
     }
 
@@ -136,12 +212,20 @@ export class DesktopCalendarController {
     };
   }
 
-  private async openWindow(): Promise<DesktopCalendarSnapshot> {
-    if (this.window && !this.window.isDestroyed()) {
-      this.window.show();
-      return this.readSnapshot();
+  /** 保存的显示器被拔掉：回到主屏右上角并持久化。 */
+  private async handleDisplayRemoved() {
+    if (!this.settings.displayId || isDisplayAvailable(this.settings.displayId)) {
+      return;
     }
 
+    await this.applySettings({
+      displayId: getPrimaryDisplayId(),
+      x: CALENDAR_UNPOSITIONED,
+      y: CALENDAR_UNPOSITIONED,
+    });
+  }
+
+  private async openWindow() {
     const window = new BrowserWindow({
       ...this.resolveBounds(),
       frame: false,
@@ -166,12 +250,22 @@ export class DesktopCalendarController {
     window.setIgnoreMouseEvents(true);
     window.on('closed', () => {
       this.window = undefined;
+      this.publishSnapshot();
     });
 
     this.window = window;
-    await this.loadRenderer(window);
-    await this.sendToBottom(window);
-    return this.readSnapshot();
+    try {
+      await this.loadRenderer(window);
+    } catch (error) {
+      this.destroyWindow();
+      throw error;
+    }
+    try {
+      await sendWindowToBottom(window);
+    } catch (error) {
+      // 置底失败时日历继续显示，沿用原有降级行为。
+      console.warn('桌面日历置底失败', error);
+    }
   }
 
   private async loadRenderer(window: BrowserWindow) {
@@ -182,59 +276,6 @@ export class DesktopCalendarController {
     }
 
     await window.loadFile(this.getRendererEntry(), { hash: '/desktop-calendar' });
-  }
-
-  /**
-   * 通过 Win32 把窗口压到 Z 序底部，满足「放在底层、不遮挡其他窗口」的要求。
-   * 置底失败时保持普通窗口，不影响日历展示。
-   */
-  private async sendToBottom(window: BrowserWindow) {
-    try {
-      const handle = window.getNativeWindowHandle();
-      const hwnd = handle.length >= 8 ? handle.readBigUInt64LE(0) : BigInt(handle.readUInt32LE(0));
-      const systemRoot = process.env.SystemRoot || process.env.windir;
-      if (!systemRoot) {
-        return;
-      }
-
-      // 目标电脑不保证安装 PowerShell 7，统一使用 Windows 自带的 5.1
-      const powerShellPath = `${systemRoot}\\System32\\WindowsPowerShell\\v1.0\\powershell.exe`;
-      await execFileAsync(
-        powerShellPath,
-        [
-          '-NoLogo',
-          '-NoProfile',
-          '-NonInteractive',
-          '-ExecutionPolicy',
-          'Bypass',
-          '-File',
-          this.getBottomScriptPath(),
-          '-WindowHandle',
-          hwnd.toString(),
-        ],
-        { timeout: BOTTOM_SCRIPT_TIMEOUT_MS, windowsHide: true },
-      );
-    } catch {
-      // 置底失败不影响日历展示
-    }
-  }
-
-  private getBottomScriptPath() {
-    return app.isPackaged
-      ? path.join(process.resourcesPath, 'desktop-layer.ps1')
-      : path.join(app.getAppPath(), 'electron', 'resources', 'desktop-layer.ps1');
-  }
-
-  private closeWindow(): Promise<DesktopCalendarSnapshot> | DesktopCalendarSnapshot {
-    const window = this.window;
-    if (!window || window.isDestroyed()) {
-      return this.readSnapshot();
-    }
-
-    return new Promise<DesktopCalendarSnapshot>((resolve) => {
-      window.once('closed', () => resolve(this.readSnapshot()));
-      window.close();
-    });
   }
 
   private destroyWindow() {
@@ -248,10 +289,23 @@ export class DesktopCalendarController {
   }
 
   private readSnapshot(): DesktopCalendarSnapshot {
+    const display = getDisplayInfo(this.settings.displayId);
+
     return {
       windowOpen: Boolean(this.window && !this.window.isDestroyed()),
       settings: this.settings,
       bounds: this.resolveBounds(),
+      displays: listDisplays(),
+      activeDisplayId: display.id,
     };
+  }
+
+  private publishSnapshot() {
+    const snapshot = this.readSnapshot();
+    if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+      this.mainWindow.webContents.send(IPC_CHANNELS.desktopCalendarSnapshot, snapshot);
+    }
+    this.onStateChanged?.();
+    return snapshot;
   }
 }

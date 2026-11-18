@@ -1,7 +1,10 @@
 import path from 'node:path';
-import { app, BrowserWindow, dialog, ipcMain } from 'electron';
-import { BACKGROUND_LAUNCH_ARG, DesktopNotesController, getAppIconPath } from './desktop-notes-controller';
+import { pathToFileURL } from 'node:url';
+import { app, BrowserWindow, dialog, ipcMain, type IpcMainInvokeEvent } from 'electron';
+import { AppSettingsController, BACKGROUND_LAUNCH_ARG } from './app-settings-controller';
+import { DesktopNotesController, getAppIconPath } from './desktop-notes-controller';
 import { DesktopCalendarController } from './desktop-calendar-controller';
+import { TrayController } from './tray-controller';
 import { IPC_CHANNELS } from './ipc/channels';
 import { ConfigService } from './services/config-service';
 import { HolidayService } from './services/holiday-service';
@@ -28,8 +31,13 @@ import type {
 
 let mainWindow: BrowserWindow | undefined;
 let configService: ConfigService;
+let appSettingsController: AppSettingsController;
 let desktopNotesController: DesktopNotesController;
 let desktopCalendarController: DesktopCalendarController;
+let trayController: TrayController | undefined;
+let quitPending: Promise<void> | undefined;
+let quitting = false;
+let pendingConfigWrite: Promise<unknown> = Promise.resolve();
 let dnsService: DnsService;
 let hostsService: HostsService;
 const scanService = new ScanService();
@@ -70,6 +78,17 @@ function createWindow() {
   });
 
   desktopNotesController.attachMainWindow(mainWindow);
+  desktopCalendarController.attachMainWindow(mainWindow);
+  const window = mainWindow;
+  window.on('close', (event) => {
+    if (quitting) return;
+    event.preventDefault();
+    if (!trayController || appSettingsController.quitWhenMainWindowCloses) {
+      void quitApplication().catch(reportDesktopError);
+    } else {
+      window.hide();
+    }
+  });
 
   if (process.env.NODE_ENV === 'development') {
     void mainWindow.loadURL(process.env.DEV_SERVER_URL ?? 'http://127.0.0.1:8137');
@@ -99,6 +118,30 @@ function showMainWindow() {
   mainWindow.focus();
 }
 
+/** 托盘动作失败时即使主窗口隐藏也给出反馈。 */
+function reportDesktopError(error: unknown) {
+  console.error('桌面工具操作失败', error);
+  dialog.showErrorBox('桌面工具操作失败', error instanceof Error ? error.message : String(error));
+}
+
+/** 同一份配置的读改写按顺序执行，避免不同模块覆盖彼此的新值。 */
+function writeAppConfig<T>(write: () => Promise<T>): Promise<T> {
+  const task = pendingConfigWrite.then(write);
+  pendingConfigWrite = task.catch(() => undefined);
+  return task;
+}
+
+/** 等待最后一次便签保存，避免退出时丢失草稿。 */
+function quitApplication(): Promise<void> {
+  if (quitting) return Promise.resolve();
+  quitPending ??= (async () => {
+    await desktopNotesController?.prepareQuit();
+    quitting = true;
+    app.quit();
+  })().finally(() => { quitPending = undefined; });
+  return quitPending;
+}
+
 function registerDialogHandlers() {
   ipcMain.handle(IPC_CHANNELS.selectDirectory, async () => {
     const result = await dialog.showOpenDialog({
@@ -113,16 +156,46 @@ function registerConfigHandlers() {
   ipcMain.handle(IPC_CHANNELS.getAppConfig, async () => configService.getConfig());
 
   ipcMain.handle(IPC_CHANNELS.saveProtectedProjects, async (_, projects: ProtectedProject[]) =>
-    configService.saveProtectedProjects(projects),
+    writeAppConfig(() => configService.saveProtectedProjects(projects)),
   );
 
   ipcMain.handle(IPC_CHANNELS.saveDirectoryHistory, async (_, historyItems: DirectoryHistoryItem[]) =>
-    configService.saveDirectoryHistory(historyItems),
+    writeAppConfig(() => configService.saveDirectoryHistory(historyItems)),
   );
 
   ipcMain.handle(IPC_CHANNELS.saveIgnoredProjects, async (_, projects: IgnoredProject[]) =>
-    configService.saveIgnoredProjects(projects),
+    writeAppConfig(() => configService.saveIgnoredProjects(projects)),
   );
+}
+
+/** 应用设置只能从主窗口主框架读取和修改。 */
+function assertAppSettingsSender(event: IpcMainInvokeEvent) {
+  if (!mainWindow || mainWindow.isDestroyed()
+    || event.sender !== mainWindow.webContents
+    || event.senderFrame !== mainWindow.webContents.mainFrame) {
+    throw new Error('请在工具箱主窗口中操作系统设置');
+  }
+  const expected = process.env.NODE_ENV === 'development'
+    ? new URL(process.env.DEV_SERVER_URL ?? 'http://127.0.0.1:8137')
+    : pathToFileURL(getRendererEntry());
+  const actual = new URL(event.senderFrame.url);
+  // 只允许工具箱自己的页面访问；前端用 Hash 路由切换视图。
+  actual.hash = '';
+  expected.hash = '';
+  if (actual.href !== expected.href) {
+    throw new Error('请在工具箱主窗口中操作系统设置');
+  }
+}
+
+function registerAppSettingsHandlers() {
+  ipcMain.handle(IPC_CHANNELS.appSettingsGetSnapshot, (event) => {
+    assertAppSettingsSender(event);
+    return appSettingsController.getSnapshot();
+  });
+  ipcMain.handle(IPC_CHANNELS.appSettingsSave, (event, patch: unknown) => {
+    assertAppSettingsSender(event);
+    return writeAppConfig(() => appSettingsController.save(patch));
+  });
 }
 
 function sendTaskEvent(event: TaskEvent) {
@@ -370,7 +443,7 @@ function registerDeveloperToolsHandlers() {
   ipcMain.handle(IPC_CHANNELS.flushDns, async () => dnsService.flush());
 }
 
-// 开机自启带 --background 参数，此时只恢复便利贴，不打开主窗口
+// 登录启动带 --background 参数，托盘常驻，并按各功能已有偏好恢复桌面窗口。
 const isBackgroundLaunch = process.argv.includes(BACKGROUND_LAUNCH_ARG);
 
 // 单实例锁：避免开机自启的实例与手动启动的实例并存两套托盘和便利贴。
@@ -391,6 +464,8 @@ if (!hasSingleInstanceLock) {
   app.whenReady().then(async () => {
     app.setAppUserModelId('com.devbox.app');
     configService = new ConfigService(app.getPath('userData'));
+    appSettingsController = new AppSettingsController(configService);
+    await appSettingsController.start();
     const elevationService = new ElevationService(getHostsHelperPath());
     dnsService = new DnsService(elevationService);
     hostsService = new HostsService(app.getPath('userData'), elevationService, dnsService);
@@ -400,7 +475,8 @@ if (!hasSingleInstanceLock) {
       getPreloadPath,
       getRendererEntry,
       getIconPath: getAppIconPath,
-      openMainWindow: showMainWindow,
+      saveRuntime: (runtime) => writeAppConfig(() => configService.saveRuntime(runtime)),
+      reportError: reportDesktopError,
     });
     desktopCalendarController = new DesktopCalendarController({
       configService,
@@ -408,35 +484,64 @@ if (!hasSingleInstanceLock) {
       timeService: new TimeService(),
       getPreloadPath,
       getRendererEntry,
+      saveCalendarSettings: (settings) => writeAppConfig(() => configService.saveCalendarSettings(settings)),
+      reportError: reportDesktopError,
     });
     registerDialogHandlers();
     registerConfigHandlers();
+    registerAppSettingsHandlers();
     registerScanHandlers();
     registerDeleteHandlers();
     registerDeveloperToolsHandlers();
     desktopNotesController.registerIpc();
     desktopCalendarController.registerIpc();
-    await desktopNotesController.start({ background: isBackgroundLaunch });
-    await desktopCalendarController.start();
-
-    if (!isBackgroundLaunch) {
-      createWindow();
+    try {
+      trayController = new TrayController({
+        iconPath: getAppIconPath(),
+        panelPreloadPath: path.join(__dirname, 'tray-panel-preload.js'),
+        getRendererEntry,
+        getNotesState: () => desktopNotesController.getTrayState(),
+        getCalendarState: () => desktopCalendarController.getTrayState(),
+        toggleNotesWindow: (activate) => desktopNotesController.toggleWindow(activate),
+        toggleNotesDesktopMode: () => desktopNotesController.toggleDesktopMode(),
+        highlightNotesBounds: () => desktopNotesController.highlightNotesBounds(),
+        toggleCalendarWindow: () => desktopCalendarController.toggleWindow(),
+        toggleCalendarTheme: () => desktopCalendarController.toggleTheme(),
+        syncCalendarTime: () => desktopCalendarController.syncTime(),
+        openMainWindow: showMainWindow,
+        quit: quitApplication,
+        reportError: reportDesktopError,
+      });
+      desktopNotesController.setOnStateChanged(() => trayController?.refresh());
+      desktopCalendarController.setOnStateChanged(() => trayController?.refresh());
+    } catch (error) {
+      reportDesktopError(error);
     }
 
-    app.on('activate', () => {
-      if (BrowserWindow.getAllWindows().length === 0) {
-        createWindow();
-      }
-    });
+    await desktopNotesController.start(Boolean(trayController)).catch(reportDesktopError);
+    await desktopCalendarController.start().catch(reportDesktopError);
+    trayController?.enable();
+
+    if (!quitting && (!isBackgroundLaunch || !trayController)) {
+      showMainWindow();
+    }
+
+    app.on('activate', showMainWindow);
   });
 
-  app.on('window-all-closed', () => {
-    if (process.platform === 'darwin') {
+  app.on('before-quit', (event) => {
+    if (!quitting && desktopNotesController) {
+      event.preventDefault();
+      void quitApplication().catch(reportDesktopError);
       return;
     }
+    trayController?.destroy();
+  });
 
-    if (desktopNotesController.shouldQuitWhenAllWindowsClosed()) {
-      app.quit();
+  // 只要托盘存在，就保留进程以便重新打开主窗口。
+  app.on('window-all-closed', () => {
+    if (!trayController && process.platform !== 'darwin') {
+      void quitApplication().catch(reportDesktopError);
     }
   });
 }

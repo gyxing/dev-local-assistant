@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Button, Card, Descriptions, Input, InputNumber, Modal, Popconfirm, Slider, Space, Switch, Table, Tag, Typography, message } from 'antd';
+import { Button, Card, Descriptions, Input, InputNumber, Modal, Popconfirm, Select, Slider, Space, Switch, Table, Tag, Typography, message } from 'antd';
 import {
   ArrowDownOutlined,
   ArrowLeftOutlined,
@@ -32,6 +32,16 @@ import './index.less';
 
 const { Text, Title } = Typography;
 
+// 方位图的键盘顺序按屏幕位置从上到下、从左到右。
+const anchorOrder: Record<DesktopNotesAnchor, number> = {
+  'top-left': 0,
+  'top-right': 1,
+  center: 2,
+  'bottom-left': 3,
+  'bottom-right': 4,
+};
+const positionPresets = listNotesWindowAnchors().sort((a, b) => anchorOrder[a.anchor] - anchorOrder[b.anchor]);
+
 /**
  * 在主工具里管理便利贴的配置、贴纸、窗口位置和本地缓存。
  */
@@ -39,7 +49,7 @@ export default function DesktopNotesManager() {
   const [snapshot, setSnapshot] = useState<DesktopNotesSnapshot>();
   const [loading, setLoading] = useState(false);
   const [pendingAction, setPendingAction] = useState<'open' | 'close' | 'refresh'>();
-  const [savingRuntime, setSavingRuntime] = useState(false);
+  const [savingMode, setSavingMode] = useState(false);
   const [savingContent, setSavingContent] = useState(false);
   const [highlightingBounds, setHighlightingBounds] = useState(false);
   const [boundsDraft, setBoundsDraft] = useState<DesktopNotesWindowBounds>();
@@ -50,6 +60,7 @@ export default function DesktopNotesManager() {
   const [editText, setEditText] = useState('');
   const [editPinned, setEditPinned] = useState(false);
   const apiAvailable = Boolean(window.desktopNotes);
+  const desktopMode = snapshot?.windowOpen ? snapshot.desktopModeActive : (snapshot?.state.settings.desktopMode ?? false);
 
   useEffect(() => {
     const api = window.desktopNotes;
@@ -58,12 +69,14 @@ export default function DesktopNotesManager() {
     }
 
     let active = true;
+    let receivedPush = false;
     void api.getSnapshot().then((nextSnapshot) => {
-      if (active) {
+      if (active && !receivedPush) {
         setSnapshot(nextSnapshot);
       }
     });
     const stop = api.onSnapshot((nextSnapshot) => {
+      receivedPush = true;
       setSnapshot(nextSnapshot);
     });
 
@@ -106,23 +119,6 @@ export default function DesktopNotesManager() {
     }
   }
 
-  async function updateRuntime(update: { launchAtLogin?: boolean; quitWhenMainWindowCloses?: boolean }) {
-    const api = window.desktopNotes;
-    if (!api) {
-      message.error('当前页面未连接 Electron 能力');
-      return;
-    }
-
-    setSavingRuntime(true);
-    try {
-      setSnapshot(await api.saveRuntime(update));
-    } catch (error: unknown) {
-      message.error(error instanceof Error ? error.message : '保存运行设置失败');
-    } finally {
-      setSavingRuntime(false);
-    }
-  }
-
   async function updateContent(update: DesktopNotesContentUpdate) {
     const api = window.desktopNotes;
     if (!api) {
@@ -139,6 +135,20 @@ export default function DesktopNotesManager() {
       return false;
     } finally {
       setSavingContent(false);
+    }
+  }
+
+  async function updateDesktopMode(enabled: boolean) {
+    const api = window.desktopNotes;
+    if (!api) return;
+
+    setSavingMode(true);
+    try {
+      setSnapshot(await api.setDesktopMode(enabled));
+    } catch (error) {
+      void message.error(error instanceof Error ? error.message : '切换桌面模式失败');
+    } finally {
+      setSavingMode(false);
     }
   }
 
@@ -170,7 +180,8 @@ export default function DesktopNotesManager() {
       return;
     }
 
-    void updateContent({ settings: settingsDraft }).then((saved) => {
+    const { maxVisibleNotes, maxLinesPerNote, showPinnedOnly, opacity, fontSize } = settingsDraft;
+    void updateContent({ settings: { maxVisibleNotes, maxLinesPerNote, showPinnedOnly, opacity, fontSize } }).then((saved) => {
       settingsDirtyRef.current = false;
       if (!saved && snapshot?.state.settings) {
         setSettingsDraft(snapshot.state.settings);
@@ -211,29 +222,29 @@ export default function DesktopNotesManager() {
     {
       title: '置顶',
       dataIndex: 'pinned',
-      width: 80,
+      width: 64,
       render: (pinned: boolean) => (pinned ? <Tag color="gold">置顶</Tag> : <Tag>普通</Tag>),
     },
     {
       title: '颜色',
       dataIndex: 'color',
-      width: 80,
+      width: 56,
       render: (color: string) => <span className="desktop-notes-manager__swatch" style={{ backgroundColor: color }} />,
     },
     {
       title: '位置',
-      width: 120,
+      width: 108,
       render: (_, note) => `${Math.round(note.x)}, ${Math.round(note.y)}`,
     },
     {
       title: '更新时间',
       dataIndex: 'updatedAt',
-      width: 180,
+      width: 148,
       render: (updatedAt: number) => new Date(updatedAt).toLocaleString('zh-CN', { hour12: false }),
     },
     {
       title: '操作',
-      width: 120,
+      width: 108,
       render: (_, note) => (
         <Space size={4}>
           <Button type="link" size="small" disabled={!apiAvailable || savingContent} onClick={() => openNoteEditor(note)}>
@@ -258,6 +269,10 @@ export default function DesktopNotesManager() {
   ];
 
   const cache = snapshot?.cache;
+  const canPositionWindow = Boolean(apiAvailable && !savingContent && boundsDraft && snapshot?.workArea);
+  const activeAnchor = boundsDraft && snapshot?.workArea
+    ? matchNotesWindowAnchor(boundsDraft, snapshot.workArea)
+    : undefined;
 
   return (
     <section className="desktop-notes-manager">
@@ -307,39 +322,21 @@ export default function DesktopNotesManager() {
       </header>
 
       <Card size="small" title="运行">
-        <div className="desktop-notes-manager__runtime">
-          <div className="desktop-notes-manager__runtime-item">
-            <div>
-              <Text className="desktop-notes-manager__runtime-title">开机自启动</Text>
-              <Text type="secondary" className="desktop-notes-manager__hint">
-                {snapshot?.packaged
-                  ? '开机后打开主窗口，并恢复上次的便利贴窗口。'
-                  : '开发模式只记住选择，安装后的程序才会写入开机启动项。'}
-              </Text>
-            </div>
-            <Switch
-              checked={snapshot?.runtime.launchAtLogin ?? false}
-              loading={savingRuntime}
-              disabled={!apiAvailable}
-              onChange={(checked) => void updateRuntime({ launchAtLogin: checked })}
-            />
+        <div className="desktop-notes-manager__runtime-item">
+          <div className="desktop-notes-manager__runtime-copy">
+            <Text className="desktop-notes-manager__runtime-title">桌面模式</Text>
+            <Text type="secondary" className="desktop-notes-manager__hint">
+              置底、点击穿透、只读展示。可从托盘或这里关闭。
+            </Text>
           </div>
-          <div className="desktop-notes-manager__runtime-item">
-            <div>
-              <Text className="desktop-notes-manager__runtime-title">关闭主窗口时退出</Text>
-              <Text type="secondary" className="desktop-notes-manager__hint">
-                {snapshot?.runtime.quitWhenMainWindowCloses
-                  ? '关闭主窗口时退出应用，并一起关闭便利贴。'
-                  : '关闭主窗口时隐藏到托盘，便利贴继续留在桌面。'}
-              </Text>
-            </div>
-            <Switch
-              checked={snapshot?.runtime.quitWhenMainWindowCloses ?? false}
-              loading={savingRuntime}
-              disabled={!apiAvailable}
-              onChange={(checked) => void updateRuntime({ quitWhenMainWindowCloses: checked })}
-            />
-          </div>
+          <Switch
+            aria-label="桌面模式"
+            className="desktop-notes-manager__runtime-switch"
+            checked={desktopMode}
+            loading={savingMode}
+            disabled={!apiAvailable || !snapshot}
+            onChange={(checked) => void updateDesktopMode(checked)}
+          />
         </div>
       </Card>
 
@@ -407,6 +404,7 @@ export default function DesktopNotesManager() {
             />
           </label>
           <Button
+            className="desktop-notes-manager__settings-apply"
             size="small"
             type="primary"
             icon={<CheckOutlined />}
@@ -420,137 +418,171 @@ export default function DesktopNotesManager() {
 
       <Card size="small" title="窗口">
         <div className="desktop-notes-manager__window">
-          {snapshot?.windowOpen && snapshot.state.notes.length === 0 ? (
+          {snapshot?.windowOpen && !snapshot.desktopModeActive && snapshot.state.notes.length === 0 ? (
             <Text type="secondary" className="desktop-notes-manager__compact-hint">
-              当前没有贴纸，便利贴窗口已收缩为右下角的新建按钮；窗口设置将在添加贴纸后生效。
+              当前没有贴纸，便利贴窗口已收缩为右下角的操作按钮。添加贴纸或进入桌面模式后会恢复完整范围。
             </Text>
           ) : null}
-          <label className="desktop-notes-manager__field">
-            <span>宽度</span>
-            <InputNumber
-              min={320}
-              max={2400}
-              size="small"
-              disabled={!apiAvailable || savingContent || !boundsDraft}
-              value={boundsDraft?.width}
-              onChange={(value) => {
-                if (typeof value !== 'number' || !boundsDraft || !snapshot?.workArea) {
-                  return;
-                }
-                const anchor = matchNotesWindowAnchor(boundsDraft, snapshot.workArea);
-                setBoundsDirty(true);
-                setBoundsDraft(
-                  anchor
-                    ? placeNotesWindow(anchor, { width: value, height: boundsDraft.height }, snapshot.workArea)
-                    : { ...boundsDraft, width: value },
-                );
-              }}
-            />
-          </label>
-          <label className="desktop-notes-manager__field">
-            <span>高度</span>
-            <InputNumber
-              min={240}
-              max={1600}
-              size="small"
-              disabled={!apiAvailable || savingContent || !boundsDraft}
-              value={boundsDraft?.height}
-              onChange={(value) => {
-                if (typeof value !== 'number' || !boundsDraft || !snapshot?.workArea) {
-                  return;
-                }
-                const anchor = matchNotesWindowAnchor(boundsDraft, snapshot.workArea);
-                setBoundsDirty(true);
-                setBoundsDraft(
-                  anchor
-                    ? placeNotesWindow(anchor, { width: boundsDraft.width, height: value }, snapshot.workArea)
-                    : { ...boundsDraft, height: value },
-                );
-              }}
-            />
-          </label>
-          <div className="desktop-notes-manager__anchors" aria-label="窗口位置">
-            {listNotesWindowAnchors().map((item) => (
+          <div className="desktop-notes-manager__window-controls">
+            <div className="desktop-notes-manager__window-main">
+              <div className="desktop-notes-manager__window-fields">
+                <label className="desktop-notes-manager__field desktop-notes-manager__field--display">
+                  <span>显示器</span>
+                  <Select
+                    size="small"
+                    value={snapshot?.activeDisplayId}
+                    disabled={!apiAvailable || savingContent}
+                    options={(snapshot?.displays ?? []).map((display) => ({ value: display.id, label: display.label }))}
+                    onChange={(value) => void updateContent({ displayId: value })}
+                  />
+                </label>
+                <label className="desktop-notes-manager__field">
+                  <span>宽度</span>
+                  <InputNumber
+                    min={320}
+                    max={2400}
+                    size="small"
+                    disabled={!apiAvailable || savingContent || !boundsDraft}
+                    value={boundsDraft?.width}
+                    onChange={(value) => {
+                      if (typeof value !== 'number' || !boundsDraft || !snapshot?.workArea) {
+                        return;
+                      }
+                      const anchor = matchNotesWindowAnchor(boundsDraft, snapshot.workArea);
+                      setBoundsDirty(true);
+                      setBoundsDraft(
+                        anchor
+                          ? placeNotesWindow(anchor, { width: value, height: boundsDraft.height }, snapshot.workArea)
+                          : { ...boundsDraft, width: value },
+                      );
+                    }}
+                  />
+                </label>
+                <label className="desktop-notes-manager__field">
+                  <span>高度</span>
+                  <InputNumber
+                    min={240}
+                    max={1600}
+                    size="small"
+                    disabled={!apiAvailable || savingContent || !boundsDraft}
+                    value={boundsDraft?.height}
+                    onChange={(value) => {
+                      if (typeof value !== 'number' || !boundsDraft || !snapshot?.workArea) {
+                        return;
+                      }
+                      const anchor = matchNotesWindowAnchor(boundsDraft, snapshot.workArea);
+                      setBoundsDirty(true);
+                      setBoundsDraft(
+                        anchor
+                          ? placeNotesWindow(anchor, { width: boundsDraft.width, height: value }, snapshot.workArea)
+                          : { ...boundsDraft, height: value },
+                      );
+                    }}
+                  />
+                </label>
+              </div>
+            </div>
+            <div className="desktop-notes-manager__position-tools">
+              <div className="desktop-notes-manager__position-tool">
+                <span className="desktop-notes-manager__position-label">位置预设</span>
+                <div className="desktop-notes-manager__anchors" role="group" aria-label="窗口位置预设">
+                  {positionPresets.map(({ anchor, label }) => {
+                    const selected = activeAnchor === anchor;
+                    return (
+                      <Button
+                        key={anchor}
+                        className={`desktop-notes-manager__anchor desktop-notes-manager__anchor--${anchor}`}
+                        size="small"
+                        type={selected ? 'primary' : 'default'}
+                        icon={<BorderOutlined />}
+                        aria-label={label}
+                        aria-pressed={selected}
+                        title={label}
+                        disabled={!canPositionWindow}
+                        onClick={() => chooseAnchor(anchor)}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="desktop-notes-manager__position-tool">
+                <span className="desktop-notes-manager__position-label">微调</span>
+                <div className="desktop-notes-manager__dpad" role="group" aria-label="微调窗口位置">
+                  <Button
+                    className="desktop-notes-manager__direction desktop-notes-manager__direction--up"
+                    size="small"
+                    icon={<ArrowUpOutlined />}
+                    aria-label="上移"
+                    title="上移"
+                    disabled={!canPositionWindow}
+                    onClick={() => moveBounds('up')}
+                  />
+                  <Button
+                    className="desktop-notes-manager__direction desktop-notes-manager__direction--left"
+                    size="small"
+                    icon={<ArrowLeftOutlined />}
+                    aria-label="左移"
+                    title="左移"
+                    disabled={!canPositionWindow}
+                    onClick={() => moveBounds('left')}
+                  />
+                  <Button
+                    className="desktop-notes-manager__direction desktop-notes-manager__direction--right"
+                    size="small"
+                    icon={<ArrowRightOutlined />}
+                    aria-label="右移"
+                    title="右移"
+                    disabled={!canPositionWindow}
+                    onClick={() => moveBounds('right')}
+                  />
+                  <Button
+                    className="desktop-notes-manager__direction desktop-notes-manager__direction--down"
+                    size="small"
+                    icon={<ArrowDownOutlined />}
+                    aria-label="下移"
+                    title="下移"
+                    disabled={!canPositionWindow}
+                    onClick={() => moveBounds('down')}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="desktop-notes-manager__window-footer">
+            <Text type="secondary" className="desktop-notes-manager__placement">
+              {boundsDraft && snapshot?.workArea ? describeNotesWindow(boundsDraft, snapshot.workArea) : '等待读取屏幕位置'}
+            </Text>
+            <Space size={8} className="desktop-notes-manager__window-actions">
               <Button
-                key={item.anchor}
                 size="small"
-                type={
-                  boundsDraft && snapshot?.workArea && matchNotesWindowAnchor(boundsDraft, snapshot.workArea) === item.anchor
-                    ? 'primary'
-                    : 'default'
-                }
-                disabled={!apiAvailable || savingContent || !boundsDraft || !snapshot?.workArea}
-                onClick={() => chooseAnchor(item.anchor)}
+                icon={<BorderOutlined />}
+                loading={highlightingBounds}
+                disabled={!apiAvailable || !snapshot?.windowOpen}
+                title={snapshot?.windowOpen ? undefined : '请先打开便利贴窗口'}
+                onClick={() => void highlightBounds()}
               >
-                {item.label}
+                检测范围
               </Button>
-            ))}
+              <Button
+                type="primary"
+                size="small"
+                icon={<CheckOutlined />}
+                disabled={!apiAvailable || savingContent || !boundsDraft}
+                onClick={() => {
+                  if (!boundsDraft) {
+                    return;
+                  }
+                  void updateContent({ windowBounds: boundsDraft }).then((saved) => {
+                    if (saved) {
+                      setBoundsDirty(false);
+                    }
+                  });
+                }}
+              >
+                应用
+              </Button>
+            </Space>
           </div>
-          <div className="desktop-notes-manager__nudge" aria-label="微调窗口位置">
-            <Button
-              size="small"
-              icon={<ArrowUpOutlined />}
-              disabled={!apiAvailable || savingContent || !boundsDraft}
-              onClick={() => moveBounds('up')}
-            >
-              上
-            </Button>
-            <Button
-              size="small"
-              icon={<ArrowDownOutlined />}
-              disabled={!apiAvailable || savingContent || !boundsDraft}
-              onClick={() => moveBounds('down')}
-            >
-              下
-            </Button>
-            <Button
-              size="small"
-              icon={<ArrowLeftOutlined />}
-              disabled={!apiAvailable || savingContent || !boundsDraft}
-              onClick={() => moveBounds('left')}
-            >
-              左
-            </Button>
-            <Button
-              size="small"
-              icon={<ArrowRightOutlined />}
-              disabled={!apiAvailable || savingContent || !boundsDraft}
-              onClick={() => moveBounds('right')}
-            >
-              右
-            </Button>
-          </div>
-          <Text type="secondary" className="desktop-notes-manager__placement">
-            {boundsDraft && snapshot?.workArea ? describeNotesWindow(boundsDraft, snapshot.workArea) : '等待读取屏幕位置'}
-          </Text>
-          <Button
-            size="small"
-            icon={<BorderOutlined />}
-            loading={highlightingBounds}
-            disabled={!apiAvailable || !snapshot?.windowOpen}
-            title={snapshot?.windowOpen ? undefined : '请先打开便利贴窗口'}
-            onClick={() => void highlightBounds()}
-          >
-            检测范围
-          </Button>
-          <Button
-            type="primary"
-            size="small"
-            icon={<CheckOutlined />}
-            disabled={!apiAvailable || savingContent || !boundsDraft}
-            onClick={() => {
-              if (!boundsDraft) {
-                return;
-              }
-              void updateContent({ windowBounds: boundsDraft }).then((saved) => {
-                if (saved) {
-                  setBoundsDirty(false);
-                }
-              });
-            }}
-          >
-            应用
-          </Button>
         </div>
       </Card>
 
@@ -558,6 +590,8 @@ export default function DesktopNotesManager() {
         <Table<DesktopNote>
           rowKey="id"
           size="small"
+          tableLayout="fixed"
+          scroll={{ x: 680 }}
           columns={columns}
           dataSource={snapshot?.state.notes ?? []}
           pagination={false}
@@ -566,8 +600,10 @@ export default function DesktopNotesManager() {
       </Card>
 
       <Card size="small" title="缓存">
-        <Descriptions column={1} size="small">
-          <Descriptions.Item label="文件">{cache?.filePath ?? '-'}</Descriptions.Item>
+        <Descriptions column={{ xs: 1, sm: 2, md: 3 }} size="small">
+          <Descriptions.Item label="文件" span="filled">
+            <span className="desktop-notes-manager__cache-path">{cache?.filePath ?? '-'}</span>
+          </Descriptions.Item>
           <Descriptions.Item label="状态">{cache?.exists ? '已生成' : '尚未生成'}</Descriptions.Item>
           <Descriptions.Item label="大小">{cache?.exists ? formatBytes(cache.size) : '-'}</Descriptions.Item>
           <Descriptions.Item label="最后写入">

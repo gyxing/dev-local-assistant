@@ -1,9 +1,11 @@
+import type { AppSettingsSnapshot, AppSettingsUpdate } from '../../shared/app-settings-types';
 import type {
   DesktopNotesContentUpdate,
-  DesktopNotesRuntimeUpdate,
   DesktopNotesSnapshot,
   DesktopNotesState,
+  DesktopNotesWindowState,
 } from '../../shared/desktop-notes-types';
+import type { TrayPanelApi } from '../../shared/tray-panel-types';
 import type {
   CalendarHolidayYear,
   CalendarTimeInfo,
@@ -64,30 +66,35 @@ export interface DeveloperAssistantApi {
   flushDns: () => Promise<DnsFlushResult>;
 }
 
+export interface AppSettingsApi {
+  getSnapshot: () => Promise<AppSettingsSnapshot>;
+  save: (patch: AppSettingsUpdate) => Promise<AppSettingsSnapshot>;
+}
+
 export interface DesktopNotesApi {
   getSnapshot: () => Promise<DesktopNotesSnapshot>;
   openWindow: () => Promise<DesktopNotesSnapshot>;
   closeWindow: () => Promise<DesktopNotesSnapshot>;
   refresh: () => Promise<DesktopNotesSnapshot>;
-  loadState: () => Promise<DesktopNotesState>;
+  loadState: () => Promise<DesktopNotesWindowState>;
+  setDesktopMode: (enabled: boolean) => Promise<DesktopNotesSnapshot>;
   saveState: (state: DesktopNotesState) => Promise<DesktopNotesState>;
-  saveRuntime: (update: DesktopNotesRuntimeUpdate) => Promise<DesktopNotesSnapshot>;
   updateContent: (update: DesktopNotesContentUpdate) => Promise<DesktopNotesSnapshot>;
   highlightBounds: () => Promise<DesktopNotesSnapshot>;
   onBoundsHighlight: (handler: (durationMs: number) => void) => () => void;
   takeBoundsHighlight: () => Promise<boolean>;
-  setCompact: (compact: boolean) => Promise<void>;
-  endBoundsHighlight: () => Promise<void>;
   onSnapshot: (handler: (snapshot: DesktopNotesSnapshot) => void) => () => void;
-  onApplyState: (handler: (state: DesktopNotesState) => void) => () => void;
+  onApplyState: (handler: (state: DesktopNotesWindowState) => void) => () => void;
   onFlushRequest: (handler: () => DesktopNotesState | undefined) => () => void;
+  onResumeEdits: (handler: () => void) => () => void;
 }
 
 export interface DesktopCalendarApi {
   getSnapshot: () => Promise<DesktopCalendarSnapshot>;
   openWindow: () => Promise<DesktopCalendarSnapshot>;
   closeWindow: () => Promise<DesktopCalendarSnapshot>;
-  saveSettings: (settings: DesktopCalendarSettings) => Promise<DesktopCalendarSnapshot>;
+  saveSettings: (settings: Partial<DesktopCalendarSettings>) => Promise<DesktopCalendarSnapshot>;
+  onSnapshot: (handler: (snapshot: DesktopCalendarSnapshot) => void) => () => void;
   getHolidays: (year: number) => Promise<CalendarHolidayYear>;
   getTime: () => Promise<CalendarTimeInfo>;
   syncTime: () => Promise<CalendarTimeInfo>;
@@ -99,7 +106,9 @@ declare global {
   interface Window {
     clearNodeModules?: ClearNodeModulesApi;
     developerAssistant?: DeveloperAssistantApi;
+    appSettings?: AppSettingsApi;
     desktopNotes?: DesktopNotesApi;
     desktopCalendar?: DesktopCalendarApi;
+    trayPanel?: TrayPanelApi;
   }
 }

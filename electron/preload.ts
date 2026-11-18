@@ -1,10 +1,12 @@
 import { contextBridge, ipcRenderer } from 'electron';
+import type { AppSettingsUpdate } from '../shared/app-settings-types';
 import type {
   DesktopNotesContentUpdate,
-  DesktopNotesRuntimeUpdate,
+  DesktopNotesSnapshot,
   DesktopNotesState,
+  DesktopNotesWindowState,
 } from '../shared/desktop-notes-types';
-import type { CalendarTimeInfo, DesktopCalendarSettings } from '../shared/desktop-calendar-types';
+import type { CalendarTimeInfo, DesktopCalendarSettings, DesktopCalendarSnapshot } from '../shared/desktop-calendar-types';
 import type { PackageManagerName, PortUsageQuery } from '../shared/developer-tools-types';
 import type { HostsSaveRequest } from '../shared/network-tools-types';
 import type {
@@ -57,15 +59,19 @@ contextBridge.exposeInMainWorld('developerAssistant', {
   flushDns: () => ipcRenderer.invoke(IPC_CHANNELS.flushDns),
 });
 
+contextBridge.exposeInMainWorld('appSettings', {
+  getSnapshot: () => ipcRenderer.invoke(IPC_CHANNELS.appSettingsGetSnapshot),
+  save: (patch: AppSettingsUpdate) => ipcRenderer.invoke(IPC_CHANNELS.appSettingsSave, patch),
+});
+
 contextBridge.exposeInMainWorld('desktopNotes', {
   getSnapshot: () => ipcRenderer.invoke(IPC_CHANNELS.desktopNotesGetSnapshot),
   openWindow: () => ipcRenderer.invoke(IPC_CHANNELS.desktopNotesOpenWindow),
   closeWindow: () => ipcRenderer.invoke(IPC_CHANNELS.desktopNotesCloseWindow),
   refresh: () => ipcRenderer.invoke(IPC_CHANNELS.desktopNotesRefresh),
   loadState: () => ipcRenderer.invoke(IPC_CHANNELS.desktopNotesLoadState),
+  setDesktopMode: (enabled: boolean) => ipcRenderer.invoke(IPC_CHANNELS.desktopNotesSetDesktopMode, enabled),
   saveState: (state: DesktopNotesState) => ipcRenderer.invoke(IPC_CHANNELS.desktopNotesSaveState, state),
-  saveRuntime: (update: DesktopNotesRuntimeUpdate) =>
-    ipcRenderer.invoke(IPC_CHANNELS.desktopNotesSaveRuntime, update),
   updateContent: (update: DesktopNotesContentUpdate) =>
     ipcRenderer.invoke(IPC_CHANNELS.desktopNotesUpdateContent, update),
   highlightBounds: () => ipcRenderer.invoke(IPC_CHANNELS.desktopNotesHighlightBounds),
@@ -75,15 +81,13 @@ contextBridge.exposeInMainWorld('desktopNotes', {
     return () => ipcRenderer.removeListener(IPC_CHANNELS.desktopNotesBoundsHighlight, listener);
   },
   takeBoundsHighlight: () => ipcRenderer.invoke(IPC_CHANNELS.desktopNotesTakeBoundsHighlight),
-  setCompact: (compact: boolean) => ipcRenderer.invoke(IPC_CHANNELS.desktopNotesSetCompact, compact),
-  endBoundsHighlight: () => ipcRenderer.invoke(IPC_CHANNELS.desktopNotesEndBoundsHighlight),
-  onSnapshot: (handler: (snapshot: unknown) => void) => {
-    const listener = (_event: Electron.IpcRendererEvent, snapshot: unknown) => handler(snapshot);
+  onSnapshot: (handler: (snapshot: DesktopNotesSnapshot) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, snapshot: DesktopNotesSnapshot) => handler(snapshot);
     ipcRenderer.on(IPC_CHANNELS.desktopNotesSnapshot, listener);
     return () => ipcRenderer.removeListener(IPC_CHANNELS.desktopNotesSnapshot, listener);
   },
-  onApplyState: (handler: (state: DesktopNotesState) => void) => {
-    const listener = (_event: Electron.IpcRendererEvent, state: DesktopNotesState) => handler(state);
+  onApplyState: (handler: (state: DesktopNotesWindowState) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, state: DesktopNotesWindowState) => handler(state);
     ipcRenderer.on(IPC_CHANNELS.desktopNotesApplyState, listener);
     return () => ipcRenderer.removeListener(IPC_CHANNELS.desktopNotesApplyState, listener);
   },
@@ -94,17 +98,26 @@ contextBridge.exposeInMainWorld('desktopNotes', {
     ipcRenderer.on(IPC_CHANNELS.desktopNotesFlush, listener);
     return () => ipcRenderer.removeListener(IPC_CHANNELS.desktopNotesFlush, listener);
   },
+  onResumeEdits: (handler: () => void) => {
+    ipcRenderer.on(IPC_CHANNELS.desktopNotesResumeEdits, handler);
+    return () => ipcRenderer.removeListener(IPC_CHANNELS.desktopNotesResumeEdits, handler);
+  },
 });
 
 contextBridge.exposeInMainWorld('desktopCalendar', {
   getSnapshot: () => ipcRenderer.invoke(IPC_CHANNELS.desktopCalendarGetSnapshot),
   openWindow: () => ipcRenderer.invoke(IPC_CHANNELS.desktopCalendarOpenWindow),
   closeWindow: () => ipcRenderer.invoke(IPC_CHANNELS.desktopCalendarCloseWindow),
-  saveSettings: (settings: DesktopCalendarSettings) =>
+  saveSettings: (settings: Partial<DesktopCalendarSettings>) =>
     ipcRenderer.invoke(IPC_CHANNELS.desktopCalendarSaveSettings, settings),
   getHolidays: (year: number) => ipcRenderer.invoke(IPC_CHANNELS.desktopCalendarGetHolidays, year),
   getTime: () => ipcRenderer.invoke(IPC_CHANNELS.desktopCalendarGetTime),
   syncTime: () => ipcRenderer.invoke(IPC_CHANNELS.desktopCalendarSyncTime),
+  onSnapshot: (handler: (snapshot: DesktopCalendarSnapshot) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, snapshot: DesktopCalendarSnapshot) => handler(snapshot);
+    ipcRenderer.on(IPC_CHANNELS.desktopCalendarSnapshot, listener);
+    return () => ipcRenderer.removeListener(IPC_CHANNELS.desktopCalendarSnapshot, listener);
+  },
   onTimeChanged: (handler: (info: CalendarTimeInfo) => void) => {
     const listener = (_event: Electron.IpcRendererEvent, info: CalendarTimeInfo) => handler(info);
     ipcRenderer.on(IPC_CHANNELS.desktopCalendarTimeChanged, listener);

@@ -1,3 +1,5 @@
+import type { DisplayInfo } from './display-types';
+
 /** 日历配色主题。 */
 export type CalendarTheme = 'light' | 'dark';
 
@@ -6,9 +8,11 @@ export interface DesktopCalendarSettings {
   enabled: boolean;
   width: number;
   height: number;
-  /** 窗口左上角坐标；-1 表示尚未定位，由主进程按主屏右侧计算默认位置 */
+  /** 窗口左上角坐标；-1 表示尚未定位，由主进程按所选显示器右上角计算 */
   x: number;
   y: number;
+  /** 窗口所在显示器；缺省表示主屏 */
+  displayId?: string;
   /** 卡片背景不透明度，0 - 1，只影响背景不影响文字 */
   opacity: number;
   theme: CalendarTheme;
@@ -58,4 +62,8 @@ export interface DesktopCalendarSnapshot {
   settings: DesktopCalendarSettings;
   /** 窗口当前实际位置，未打开时返回按设置算出的目标位置 */
   bounds: DesktopCalendarBounds;
+  /** 所有显示器，供管理页切换 */
+  displays: DisplayInfo[];
+  /** 窗口当前所在显示器 id */
+  activeDisplayId: string;
 }

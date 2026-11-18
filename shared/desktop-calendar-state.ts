@@ -42,6 +42,7 @@ export function normalizeDesktopCalendarSettings(value: unknown): DesktopCalenda
       : DEFAULT_CALENDAR_HEIGHT,
     x: Number.isFinite(record.x) ? Math.round(Number(record.x)) : CALENDAR_UNPOSITIONED,
     y: Number.isFinite(record.y) ? Math.round(Number(record.y)) : CALENDAR_UNPOSITIONED,
+    displayId: typeof record.displayId === 'string' ? record.displayId : undefined,
     opacity: Number.isFinite(record.opacity) ? clamp(Number(record.opacity), 0, 1) : DEFAULT_CALENDAR_OPACITY,
     theme: record.theme === 'dark' ? 'dark' : 'light',
     showLunar: record.showLunar !== false,

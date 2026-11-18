@@ -1,0 +1,216 @@
+.tray-panel {
+  --tray-background: #f7f9fc;
+  --tray-card: #fff;
+  --tray-text: #182438;
+  --tray-muted: #526279;
+  --tray-border: #dce3ee;
+  --tray-rule: #edf1f6;
+  --tray-hover: #eef4fc;
+  --tray-disabled: #6b788a;
+  --tray-accent: #1c66d5;
+  --tray-accent-surface: #eaf2ff;
+  --tray-error: #a02a1f;
+  --tray-success: #14634d;
+  --tray-warning: #815414;
+  --tray-switch-off: #8493a8;
+
+  position: fixed;
+  inset: 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  overflow: auto;
+  padding: 8px;
+  border: 1px solid var(--tray-border);
+  background: var(--tray-background);
+  color: var(--tray-text);
+  font: 13px/1.35 'Segoe UI', 'Microsoft YaHei', sans-serif;
+
+  @media (prefers-color-scheme: dark) {
+    --tray-background: #171c25;
+    --tray-card: #222b38;
+    --tray-text: #eaf0f9;
+    --tray-muted: #b4c3d7;
+    --tray-border: #394659;
+    --tray-rule: #344051;
+    --tray-hover: #2d3b51;
+    --tray-disabled: #9da8b7;
+    --tray-accent: #79b5ff;
+    --tray-accent-surface: #233c65;
+    --tray-error: #ffafa6;
+    --tray-success: #85ddbe;
+    --tray-warning: #f2c88d;
+    --tray-switch-off: #63738a;
+  }
+}
+
+.tray-panel-groups,
+.tray-panel-footer {
+  flex: none;
+}
+
+.tray-panel-groups {
+  display: grid;
+  gap: 6px;
+}
+
+.tray-panel-group {
+  min-width: 0;
+  padding: 2px 5px 3px;
+  border: 1px solid var(--tray-border);
+  border-radius: 8px;
+  background: var(--tray-card);
+}
+
+.tray-panel-group-items {
+  // 子项沿卡片标题的文字对齐，操作图标放在行尾。
+  padding-inline-start: 22px;
+  border-top: 1px solid var(--tray-rule);
+}
+
+.tray-panel-row {
+  position: relative;
+  box-sizing: border-box;
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  width: 100%;
+  min-height: 25px;
+  padding: 2px 5px;
+  gap: 8px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--tray-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &[aria-disabled='false']:hover {
+    background: var(--tray-hover);
+  }
+
+  &[aria-disabled='true'] {
+    cursor: default;
+  }
+
+  // 同组事务等待时保留原文字颜色，仅真正不可用的行置灰。
+  &.is-unavailable {
+    color: var(--tray-disabled);
+  }
+}
+
+.tray-panel-row:focus-visible {
+  outline: 2px solid var(--tray-accent);
+  outline-offset: -1px;
+}
+
+.tray-panel-row--main {
+  min-height: 31px;
+  padding-inline: 8px;
+  background: var(--tray-accent-surface);
+  color: var(--tray-accent);
+  font-weight: 600;
+}
+
+.tray-panel-row--header {
+  min-height: 32px;
+  font-weight: 600;
+
+  .tray-panel-icon {
+    color: var(--tray-accent);
+  }
+}
+
+.tray-panel-row--action .tray-panel-icon,
+.tray-panel-row--quit {
+  color: var(--tray-muted);
+}
+
+.tray-panel-footer {
+  border-top: 1px solid var(--tray-border);
+}
+
+.tray-panel-row--quit {
+  min-height: 27px;
+  padding-inline: 8px;
+}
+
+.tray-panel-icon {
+  display: grid;
+  flex: 0 0 14px;
+  place-items: center;
+  font-size: 14px;
+}
+
+.tray-panel-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.tray-panel-entry-arrow {
+  flex: 0 0 auto;
+  font-size: 12px;
+  transform: rotate(-35deg);
+}
+
+.tray-panel-row-status {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--tray-muted);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  &.is-success {
+    color: var(--tray-success);
+  }
+
+  &.is-warning {
+    color: var(--tray-warning);
+  }
+
+  &.is-error {
+    color: var(--tray-error);
+  }
+}
+
+.tray-panel-switch {
+  position: relative;
+  flex: 0 0 28px;
+  height: 16px;
+  border-radius: 8px;
+  background: var(--tray-switch-off);
+
+  &::after {
+    position: absolute;
+    inset-block-start: 2px;
+    inset-inline-start: 2px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #fff;
+    content: '';
+  }
+}
+
+.tray-panel-row[aria-checked='true'] .tray-panel-switch {
+  background: var(--tray-accent);
+
+  &::after {
+    inset-inline-start: 14px;
+  }
+}
+
+.tray-panel-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

@@ -1,4 +1,5 @@
 import type { DesktopCalendarSettings } from './desktop-calendar-types';
+import type { AppSettingsPreferences } from './app-settings-types';
 
 export type NodeModulesSource = 'package-json' | 'orphan-node-modules';
 
@@ -47,9 +48,7 @@ export interface IgnoredProject {
 }
 
 /** 应用运行方式。关闭主窗口的默认行为是隐藏到托盘，不退出进程。 */
-export interface AppRuntimePreferences {
-  launchAtLogin: boolean;
-  quitWhenMainWindowCloses: boolean;
+export interface AppRuntimePreferences extends AppSettingsPreferences {
   notesWindowOpen: boolean;
 }
 
