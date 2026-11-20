@@ -1,5 +1,5 @@
 appId: com.devbox.app
-productName: 开发者工具箱
+productName: 本地助手
 asar: true
 
 directories:
@@ -39,7 +39,7 @@ nsis:
   allowToChangeInstallationDirectory: true
   createDesktopShortcut: always
   createStartMenuShortcut: true
-  shortcutName: 开发者工具箱
+  shortcutName: 本地助手
   runAfterFinish: true
 
 # 文件名由 package.json 的 name 驱动，平台与架构段便于将来多平台产物并存

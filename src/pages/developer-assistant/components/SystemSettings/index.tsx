@@ -111,7 +111,7 @@ export default function SystemSettings({ appSettings }: SystemSettingsProps) {
                   value={settings?.quitWhenMainWindowCloses ? 'quit' : 'tray'}
                   options={[
                     { label: '收起到托盘', value: 'tray' },
-                    { label: '退出工具箱', value: 'quit' },
+                    { label: '退出本地助手', value: 'quit' },
                   ]}
                   disabled={disabled}
                   onChange={(mode) => void update('quitWhenMainWindowCloses', mode === 'quit')}

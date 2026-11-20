@@ -11,7 +11,7 @@ import type { ConfigService } from './services/config-service';
 /** 登录启动以托盘为入口，手动打开应用仍显示主窗口。 */
 export const BACKGROUND_LAUNCH_ARG = '--background';
 
-/** 管理工具箱的应用级运行偏好和 Windows 登录项。 */
+/** 管理本地助手的应用级运行偏好和 Windows 登录项。 */
 export class AppSettingsController {
   private preferences: AppSettingsPreferences = {
     mainWindowTheme: DEFAULT_APP_RUNTIME_PREFERENCES.mainWindowTheme,
@@ -21,7 +21,7 @@ export class AppSettingsController {
 
   constructor(private readonly configService: ConfigService) {}
 
-  /** 读取旧配置并同步安装版登录项，失败时仍可启动工具箱。 */
+  /** 读取旧配置并同步安装版登录项，失败时仍可启动本地助手。 */
   async start(): Promise<void> {
     this.updatePreferences((await this.configService.getConfig()).runtime);
     if (this.loginItemSupported) {

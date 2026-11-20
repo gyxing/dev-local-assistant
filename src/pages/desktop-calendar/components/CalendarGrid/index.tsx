@@ -47,13 +47,18 @@ export default function CalendarGrid({
               .filter(Boolean)
               .join(' ')}
           >
-            <span className="desktop-calendar__day-number">{cell.day}</span>
+            <div className="desktop-calendar__day-heading">
+              <span className="desktop-calendar__day-number">{cell.day}</span>
+              {showHolidayMarks && holiday ? (
+                <span
+                  className={`desktop-calendar__mark${holiday.isOffDay ? ' is-off' : ' is-work'}`}
+                  aria-label={holiday.isOffDay ? '休息日' : '补班日'}
+                >
+                  {holiday.isOffDay ? '休' : '班'}
+                </span>
+              ) : null}
+            </div>
             {subText ? <span className="desktop-calendar__day-sub" title={subText}>{subText}</span> : null}
-            {showHolidayMarks && holiday ? (
-              <span className={`desktop-calendar__mark${holiday.isOffDay ? ' is-off' : ' is-work'}`}>
-                {holiday.isOffDay ? '休' : '班'}
-              </span>
-            ) : null}
           </div>
         );
       })}

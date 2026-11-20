@@ -125,7 +125,7 @@ export class TrayController {
   constructor(private readonly options: TrayControllerOptions) {
     this.tray = new Tray(options.iconPath);
     try {
-      this.tray.setToolTip('开发者工具箱');
+      this.tray.setToolTip('本地助手');
       this.tray.on('double-click', () => {
         if (this.ready) void this.runAction('open-main', false);
       });

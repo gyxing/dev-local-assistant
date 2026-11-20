@@ -123,7 +123,7 @@ function DeveloperAssistantWorkspace({ appSettings }: { appSettings: ReturnType<
             items={moduleMenu}
             selectedKeys={settingsActive ? [] : [activeModule]}
             onClick={handleModuleChange}
-            aria-label="开发者工具箱模块"
+            aria-label="本地助手模块"
           />
 
           <div className="developer-assistant__sidebar-footer">

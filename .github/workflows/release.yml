@@ -102,7 +102,7 @@ jobs:
           if ($releaseExists) {
             gh release upload $env:RELEASE_TAG @assets --clobber
           } else {
-            gh release create $env:RELEASE_TAG @assets --verify-tag --generate-notes --title "开发者工具箱 $env:RELEASE_TAG"
+            gh release create $env:RELEASE_TAG @assets --verify-tag --generate-notes --title "本地助手 $env:RELEASE_TAG"
           }
 
           if ($LASTEXITCODE -ne 0) {

@@ -5,7 +5,7 @@ export function isMainWindowTheme(value: unknown): value is MainWindowTheme {
   return value === 'system' || value === 'light' || value === 'dark';
 }
 
-/** 工具箱的外观与运行偏好。 */
+/** 本地助手的外观与运行偏好。 */
 export interface AppSettingsPreferences {
   mainWindowTheme: MainWindowTheme;
   launchAtLogin: boolean;

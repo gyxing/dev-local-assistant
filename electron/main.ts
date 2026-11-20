@@ -1,3 +1,4 @@
+import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { app, BrowserWindow, dialog, ipcMain, type IpcMainInvokeEvent } from 'electron';
@@ -66,7 +67,7 @@ function createWindow() {
     height: 760,
     minWidth: 980,
     minHeight: 640,
-    title: '开发者工具箱',
+    title: '本地助手',
     icon: getAppIconPath(),
     webPreferences: {
       preload: getPreloadPath(),
@@ -173,17 +174,17 @@ function assertAppSettingsSender(event: IpcMainInvokeEvent) {
   if (!mainWindow || mainWindow.isDestroyed()
     || event.sender !== mainWindow.webContents
     || event.senderFrame !== mainWindow.webContents.mainFrame) {
-    throw new Error('请在工具箱主窗口中操作系统设置');
+    throw new Error('请在本地助手主窗口中操作系统设置');
   }
   const expected = process.env.NODE_ENV === 'development'
     ? new URL(process.env.DEV_SERVER_URL ?? 'http://127.0.0.1:8137')
     : pathToFileURL(getRendererEntry());
   const actual = new URL(event.senderFrame.url);
-  // 只允许工具箱自己的页面访问；前端用 Hash 路由切换视图。
+  // 只允许本地助手自己的页面访问；前端用 Hash 路由切换视图。
   actual.hash = '';
   expected.hash = '';
   if (actual.href !== expected.href) {
-    throw new Error('请在工具箱主窗口中操作系统设置');
+    throw new Error('请在本地助手主窗口中操作系统设置');
   }
 }
 
@@ -441,6 +442,15 @@ function registerDeveloperToolsHandlers() {
   );
 
   ipcMain.handle(IPC_CHANNELS.flushDns, async () => dnsService.flush());
+}
+
+// Electron 默认按应用名称生成数据目录，改名后沿用原目录，保留已有配置和便利贴。
+const appDataPath = app.getPath('appData');
+const defaultUserDataPath = path.join(appDataPath, app.name);
+if (!app.commandLine.hasSwitch('user-data-dir') && path.relative(defaultUserDataPath, app.getPath('userData')) === '') {
+  const legacyUserDataPath = path.join(appDataPath, '开发者工具箱');
+  mkdirSync(legacyUserDataPath, { recursive: true });
+  app.setPath('userData', legacyUserDataPath);
 }
 
 // 登录启动带 --background 参数，托盘常驻，并按各功能已有偏好恢复桌面窗口。

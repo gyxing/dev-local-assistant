@@ -204,7 +204,7 @@ export default function TrayPanelPage() {
   const canExplainUnavailable = Boolean(state && !state.notes.windowOpen && !state.pending.includes('toggle-notes'));
 
   return (
-    <main className="tray-panel" aria-label="开发者工具箱托盘面板">
+    <main className="tray-panel" aria-label="本地助手托盘面板">
       {row('open-main', '打开主窗口', { variant: 'main', icon: <DesktopOutlined /> })}
 
       <div className="tray-panel-groups">
@@ -246,7 +246,7 @@ export default function TrayPanelPage() {
       </div>
 
       <footer className="tray-panel-footer">
-        {row('quit', '退出工具箱', { variant: 'quit', icon: <LogoutOutlined /> })}
+        {row('quit', '退出本地助手', { variant: 'quit', icon: <LogoutOutlined /> })}
       </footer>
       <span className="tray-panel-sr-only" role="status">{feedback?.message}</span>
     </main>
