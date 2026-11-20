@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent } from 'react';
+import { DeleteOutlined, EllipsisOutlined, PushpinOutlined, SettingOutlined } from '@ant-design/icons';
 import type { DesktopNote, DesktopNoteSettings } from '../../../../../shared/desktop-notes-types';
 
 type UpdateNoteInput = Partial<Omit<DesktopNote, 'id' | 'createdAt'>> & { id: string };
@@ -12,7 +13,7 @@ interface StickyNoteProps {
   onToggleMenu: () => void;
   onChange: (input: UpdateNoteInput) => void;
   onDelete: (id: string) => void;
-  onOpenSettings: () => void;
+  onOpenSettings: (trigger: HTMLButtonElement | null) => void;
 }
 
 interface DragState {
@@ -46,6 +47,27 @@ export default function StickyNote({
   const [dragState, setDragState] = useState<DragState>();
   const noteRef = useRef<HTMLElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const menuTriggerRef = useRef<HTMLButtonElement>(null);
+  const firstMenuActionRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    const menu = menuRef.current;
+    const note = noteRef.current;
+    if (!isMenuOpen || readOnly || !menu || !note) return;
+
+    const positionMenu = () => {
+      // 透明窗口会裁掉边缘外的内容，靠近底边时把操作面板向上移。
+      const { top } = note.getBoundingClientRect();
+      const desired = Math.min(32, window.innerHeight - top - menu.offsetHeight - 6);
+      menu.style.setProperty('--note-menu-top', `${Math.max(6 - top, desired)}px`);
+    };
+
+    positionMenu();
+    firstMenuActionRef.current?.focus();
+    window.addEventListener('resize', positionMenu);
+    return () => window.removeEventListener('resize', positionMenu);
+  }, [isMenuOpen, readOnly]);
 
   useEffect(() => {
     if (editing && !readOnly) {
@@ -68,7 +90,7 @@ export default function StickyNote({
   }
 
   function startDrag(event: PointerEvent<HTMLElement>) {
-    if (editing || isMenuOpen) {
+    if (event.button !== 0 || editing || isMenuOpen) {
       return;
     }
 
@@ -175,33 +197,68 @@ export default function StickyNote({
         </p>
       )}
 
+      {!readOnly && !editing ? (
+        <button
+          ref={menuTriggerRef}
+          className="note-menu-trigger"
+          type="button"
+          aria-label="贴纸操作"
+          aria-expanded={isMenuOpen}
+          onPointerDown={(event) => event.stopPropagation()}
+          onDoubleClick={(event) => event.stopPropagation()}
+          onClick={onToggleMenu}
+        >
+          <EllipsisOutlined aria-hidden="true" />
+        </button>
+      ) : null}
+
       {!readOnly && isMenuOpen ? (
-        <div className="note-menu" onPointerDown={(event) => event.stopPropagation()}>
+        <div
+          ref={menuRef}
+          className="note-menu"
+          role="group"
+          aria-label="贴纸操作"
+          onPointerDown={(event) => event.stopPropagation()}
+          onDoubleClick={(event) => event.stopPropagation()}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape') {
+              event.stopPropagation();
+              closeMenu();
+              menuTriggerRef.current?.focus();
+            }
+          }}
+        >
           <button
+            ref={firstMenuActionRef}
             type="button"
             onClick={() => {
               onChange({ id: note.id, pinned: !note.pinned });
               closeMenu();
+              menuTriggerRef.current?.focus();
             }}
           >
+            <PushpinOutlined aria-hidden="true" />
             {note.pinned ? '取消置顶' : '置顶'}
           </button>
           <button
             type="button"
             onClick={() => {
-              onOpenSettings();
+              onOpenSettings(menuTriggerRef.current);
               closeMenu();
             }}
           >
+            <SettingOutlined aria-hidden="true" />
             显示设置
           </button>
           <button
             type="button"
+            className="note-menu__danger"
             onClick={() => {
               onDelete(note.id);
               closeMenu();
             }}
           >
+            <DeleteOutlined aria-hidden="true" />
             删除
           </button>
         </div>

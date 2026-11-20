@@ -65,6 +65,7 @@ export default function HostsBackupModal({
 
   function confirmRestore(backup: HostsBackupItem) {
     modal.confirm({
+      autoFocusButton: 'cancel',
       title: backup.kind === 'original' ? '恢复原始 Hosts 备份' : '恢复历史 Hosts 备份',
       content: '恢复前仍会备份当前文件，恢复完成后会自动清理 DNS 缓存。',
       okText: '确认恢复',
@@ -160,6 +161,7 @@ export default function HostsBackupModal({
       onCancel={onCancel}
     >
       <Table<HostsBackupItem>
+        className="toolbox-data-table"
         rowKey="id"
         columns={columns}
         dataSource={backups}

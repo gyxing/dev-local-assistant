@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { message } from 'antd';
+import { App } from 'antd';
 import type {
   DeleteMode,
   DeleteTaskProgress,
@@ -13,6 +13,7 @@ import { getErrorMessage } from '../utils';
  * 管理删除任务状态和控制动作，确保暂停、继续、取消都复用同一套错误处理。
  */
 export default function useDeleteTask(getElectronApi: () => ClearNodeModulesApi | undefined) {
+  const { message } = App.useApp();
   const [deleteTaskId, setDeleteTaskId] = useState<string>();
   const [deleteTaskStatus, setDeleteTaskStatus] = useState<DeleteTaskStatus>();
   const [deleteProgress, setDeleteProgress] = useState<DeleteTaskProgress>();

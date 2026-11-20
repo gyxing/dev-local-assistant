@@ -74,6 +74,7 @@ function IgnoredProjectsModal({
         </Button>
       </Space>
       <Table<IgnoredProject>
+        className="toolbox-data-table"
         rowKey="id"
         columns={columns}
         dataSource={projects}

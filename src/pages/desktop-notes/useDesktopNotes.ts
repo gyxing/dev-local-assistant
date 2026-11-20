@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { message } from 'antd';
+import { App } from 'antd';
 import {
   clampDesktopNoteNumber,
   getNextNoteColor,
@@ -12,6 +12,7 @@ const SAVE_DELAY_MS = 250;
 type UpdateNoteInput = Partial<Omit<DesktopNote, 'id' | 'createdAt'>> & { id: string };
 
 export function useDesktopNotes() {
+  const { message } = App.useApp();
   const [ready, setReady] = useState(false);
   const [state, setState] = useState<DesktopNotesState>();
   const [desktopModeActive, setDesktopModeActive] = useState(false);
@@ -35,7 +36,7 @@ export function useDesktopNotes() {
         }).catch(() => message.error('便利贴保存失败，请重试'));
       }
     }, SAVE_DELAY_MS);
-  }, []);
+  }, [message]);
 
   useEffect(() => {
     const api = window.desktopNotes;
@@ -89,7 +90,7 @@ export function useDesktopNotes() {
       stopResume();
       window.clearTimeout(saveTimerRef.current);
     };
-  }, [scheduleSave]);
+  }, [message, scheduleSave]);
 
   const updateState = useCallback((updater: (current: DesktopNotesState) => DesktopNotesState) => {
     const current = stateRef.current;

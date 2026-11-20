@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { App, Button, Input, Modal, Space, Switch, Table, Tag, Typography } from 'antd';
+import { App, Button, Input, Modal, Space, Table, Tag, Typography } from 'antd';
 import {
   DeleteOutlined,
   EditOutlined,
@@ -19,6 +19,9 @@ import type {
 } from '../../../../../shared/network-tools-types';
 import HostsBackupModal from '../HostsBackupModal';
 import HostsEntryModal from '../HostsEntryModal';
+import StatusSwitch from '@/components/StatusSwitch';
+import ResultsCard from '@/components/ResultsCard';
+import WorkspacePageHeader from '../WorkspacePageHeader';
 import './index.less';
 
 const { Text } = Typography;
@@ -133,6 +136,7 @@ export default function HostsManager({ onDirtyChange }: HostsManagerProps) {
 
   function confirmDelete(entry: HostsEntry) {
     modal.confirm({
+      autoFocusButton: 'cancel',
       title: '删除 Hosts 记录',
       content: `将从待保存内容中删除 ${entry.hostnames.join('、')}，保存前不会修改系统文件。`,
       okText: '删除',
@@ -149,6 +153,7 @@ export default function HostsManager({ onDirtyChange }: HostsManagerProps) {
     }
 
     modal.confirm({
+      autoFocusButton: 'cancel',
       title: '放弃未保存修改？',
       content: '重新加载会丢弃当前尚未保存的 Hosts 编辑内容。',
       okText: '放弃并重新加载',
@@ -160,6 +165,7 @@ export default function HostsManager({ onDirtyChange }: HostsManagerProps) {
 
   function confirmSave() {
     modal.confirm({
+      autoFocusButton: 'cancel',
       title: '保存 Hosts 并清理 DNS',
       content: '保存前会创建历史备份；权限不足时 Windows 将弹出管理员授权窗口。',
       okText: '保存并刷新',
@@ -231,13 +237,15 @@ export default function HostsManager({ onDirtyChange }: HostsManagerProps) {
 
   const columns: TableColumnsType<HostsEntry> = [
     {
-      title: '启用',
+      title: '启停状态',
       dataIndex: 'enabled',
-      width: 72,
+      width: 120,
       render: (enabled: boolean, entry) => (
-        <Switch
+        <StatusSwitch
           size="small"
           checked={enabled}
+          onLabel="已启用"
+          offLabel="已停用"
           aria-label={`${entry.hostnames.join('、')} 的启用状态`}
           onChange={(checked) =>
             setEntries((currentEntries) =>
@@ -295,14 +303,10 @@ export default function HostsManager({ onDirtyChange }: HostsManagerProps) {
 
   return (
     <section className="hosts-manager">
-      <header className="hosts-manager__header">
-        <div className="hosts-manager__heading">
-          <Text strong>Hosts 与 DNS</Text>
-          <Text type="secondary" className="hosts-manager__subtitle">
-            管理本地域名映射，保存或恢复后自动清理 DNS 缓存
-          </Text>
-        </div>
-        <Space wrap>
+      <WorkspacePageHeader
+        title="Hosts / DNS"
+        description="管理本地域名映射。保存或恢复后自动清理 DNS 缓存。"
+        actions={<>
           <Button
             icon={<SyncOutlined />}
             loading={flushingDns}
@@ -320,18 +324,10 @@ export default function HostsManager({ onDirtyChange }: HostsManagerProps) {
           >
             保存并刷新
           </Button>
-        </Space>
-      </header>
+        </>}
+      />
 
-      <div className="hosts-manager__toolbar">
-        <Input
-          className="hosts-manager__search"
-          allowClear
-          prefix={<SearchOutlined />}
-          value={searchText}
-          placeholder="搜索 IP、主机名或注释"
-          onChange={(event) => setSearchText(event.target.value)}
-        />
+      <div className="toolbox-toolbar hosts-manager__toolbar">
         <Space size={6} wrap>
           <Button icon={<PlusOutlined />} disabled={!document || loading} onClick={openAddModal}>
             添加记录
@@ -346,18 +342,11 @@ export default function HostsManager({ onDirtyChange }: HostsManagerProps) {
           >
             备份恢复
           </Button>
-          <Button
-            icon={<FileTextOutlined />}
-            disabled={!document || loading}
-            onClick={() => setRawModalOpen(true)}
-          >
-            查看原文
-          </Button>
         </Space>
       </div>
 
       <div className="hosts-manager__meta">
-        <Text type="secondary" ellipsis={{ tooltip: document?.hostsPath }}>
+        <Text type="secondary" className="toolbox-mono" ellipsis={{ tooltip: document?.hostsPath }}>
           {document?.hostsPath ?? '正在读取 Windows Hosts 文件…'}
         </Text>
         {document ? <Tag>{document.encoding.toUpperCase()}</Tag> : null}
@@ -365,18 +354,43 @@ export default function HostsManager({ onDirtyChange }: HostsManagerProps) {
         {dirty ? <Tag color="orange">有未保存修改</Tag> : null}
       </div>
 
-      <Table<HostsEntry>
-        className="hosts-manager__table"
-        rowKey="id"
-        columns={columns}
-        dataSource={filteredEntries}
-        loading={loading}
-        size="small"
-        tableLayout="fixed"
-        pagination={false}
-        scroll={{ x: 860, y: '100%' }}
-        locale={{ emptyText: searchText ? '没有匹配的 Hosts 记录' : '暂无可管理的 Hosts 记录' }}
-      />
+      <ResultsCard
+        title="Hosts 记录"
+        fill={filteredEntries.length > 0}
+        extra={(
+          <Space size={6} wrap>
+            <Input
+              className="hosts-manager__search"
+              allowClear
+              prefix={<SearchOutlined />}
+              value={searchText}
+              aria-label="搜索 IP、主机名或注释"
+              placeholder="搜索 IP、主机名或注释"
+              onChange={(event) => setSearchText(event.target.value)}
+            />
+            <Button
+              icon={<FileTextOutlined />}
+              disabled={!document || loading}
+              onClick={() => setRawModalOpen(true)}
+            >
+              查看原文
+            </Button>
+          </Space>
+        )}
+      >
+        <Table<HostsEntry>
+          className={`toolbox-data-table hosts-manager__table${filteredEntries.length ? ' toolbox-fill-table' : ''}`}
+          rowKey="id"
+          columns={columns}
+          dataSource={filteredEntries}
+          loading={loading}
+          size="small"
+          tableLayout="fixed"
+          pagination={false}
+          scroll={{ x: 860, y: '100%' }}
+          locale={{ emptyText: searchText ? '没有匹配的 Hosts 记录' : '暂无可管理的 Hosts 记录' }}
+        />
+      </ResultsCard>
 
       <HostsEntryModal
         open={entryModalOpen}

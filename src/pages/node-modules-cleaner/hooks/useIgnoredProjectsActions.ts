@@ -1,4 +1,4 @@
-import { Modal, message } from 'antd';
+import { App } from 'antd';
 import type { Dispatch, SetStateAction } from 'react';
 import type { IgnoredProject, NodeModulesItem } from '@shared/task-types';
 import { getPathName } from '../utils';
@@ -17,6 +17,7 @@ export default function useIgnoredProjectsActions({
   saveIgnoredProjects,
   setSelectedRowKeys,
 }: UseIgnoredProjectsActionsOptions) {
+  const { modal, message } = App.useApp();
   async function handleIgnoreItem(item: NodeModulesItem) {
     const exists = ignoredProjects.some(
       (project) => project.projectPath.toLowerCase() === item.projectPath.toLowerCase(),
@@ -57,7 +58,8 @@ export default function useIgnoredProjectsActions({
   }
 
   function handleClearIgnoredProjects() {
-    Modal.confirm({
+    modal.confirm({
+      autoFocusButton: 'cancel',
       title: '确认清空忽略项目',
       content: '清空后不会删除任何文件，重新扫描时这些项目会再次出现在列表中。',
       okText: '清空',

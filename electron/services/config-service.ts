@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { isMainWindowTheme } from '../../shared/app-settings-types';
 import {
   DEFAULT_DESKTOP_CALENDAR_SETTINGS,
   normalizeDesktopCalendarSettings,
@@ -69,6 +70,9 @@ function normalizeRuntime(value: unknown): AppRuntimePreferences {
   }
 
   return {
+    mainWindowTheme: isMainWindowTheme(value.mainWindowTheme)
+      ? value.mainWindowTheme
+      : DEFAULT_APP_RUNTIME_PREFERENCES.mainWindowTheme,
     launchAtLogin: value.launchAtLogin === true,
     quitWhenMainWindowCloses: value.quitWhenMainWindowCloses === true,
     notesWindowOpen: value.notesWindowOpen === true,

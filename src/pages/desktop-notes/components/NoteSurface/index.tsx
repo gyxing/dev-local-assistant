@@ -1,6 +1,6 @@
 import { DesktopOutlined, PlusOutlined } from '@ant-design/icons';
-import { message } from 'antd';
-import { useEffect, useMemo, useState } from 'react';
+import { App } from 'antd';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { DesktopNote } from '../../../../../shared/desktop-notes-types';
 import { computeVisibleNotes } from '../../visible-notes';
 import type { useDesktopNotes } from '../../useDesktopNotes';
@@ -15,8 +15,12 @@ interface NoteSurfaceProps {
 
 /** 把可见贴纸、收纳入口和显示设置放在同一个透明窗口里。 */
 export default function NoteSurface({ store }: NoteSurfaceProps) {
+  const { message } = App.useApp();
   const [overflowOpen, setOverflowOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const settingsTrigger = useRef<HTMLButtonElement | null>(null);
+  const addNoteButton = useRef<HTMLButtonElement>(null);
+  const restoreSettingsFocus = useRef(false);
   const [activeMenuNoteId, setActiveMenuNoteId] = useState<string>();
   const [switchingMode, setSwitchingMode] = useState(false);
   const readOnly = store.desktopModeActive || store.paused;
@@ -34,6 +38,14 @@ export default function NoteSurface({ store }: NoteSurfaceProps) {
       setActiveMenuNoteId(undefined);
     }
   }, [store.desktopModeActive]);
+
+  // 弹层卸载后再还原焦点，贴纸被隐藏时回到新建入口。
+  useLayoutEffect(() => {
+    if (settingsOpen || !restoreSettingsFocus.current) return;
+    restoreSettingsFocus.current = false;
+    const trigger = settingsTrigger.current;
+    (trigger?.isConnected ? trigger : addNoteButton.current)?.focus({ preventScroll: true });
+  }, [settingsOpen]);
 
   async function enterDesktopMode() {
     if (!window.desktopNotes) return;
@@ -61,7 +73,7 @@ export default function NoteSurface({ store }: NoteSurfaceProps) {
       <section className="note-surface" aria-label="桌面贴纸">
         {!store.desktopModeActive ? (
           <div className={`surface-actions${notes.length === 0 ? ' is-compact' : ''}`}>
-            <button className="surface-action" type="button" aria-label="新建贴纸" disabled={readOnly} onClick={store.addNote}>
+            <button ref={addNoteButton} className="surface-action" type="button" aria-label="新建贴纸" disabled={readOnly} onClick={store.addNote}>
               <PlusOutlined />
             </button>
             <button
@@ -88,7 +100,8 @@ export default function NoteSurface({ store }: NoteSurfaceProps) {
             onToggleMenu={() => setActiveMenuNoteId(activeMenuNoteId === note.id ? undefined : note.id)}
             onChange={store.updateNote}
             onDelete={store.deleteNote}
-            onOpenSettings={() => {
+            onOpenSettings={(trigger) => {
+              settingsTrigger.current = trigger;
               setActiveMenuNoteId(undefined);
               setSettingsOpen(true);
             }}
@@ -110,7 +123,10 @@ export default function NoteSurface({ store }: NoteSurfaceProps) {
         <SettingsPopover
           settings={settings}
           onChange={store.updateSettings}
-          onClose={() => setSettingsOpen(false)}
+          onClose={() => {
+            restoreSettingsFocus.current = true;
+            setSettingsOpen(false);
+          }}
         />
       ) : null}
     </>

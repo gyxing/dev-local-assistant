@@ -1,6 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
-import { Alert, Button, Modal, Space, message } from 'antd';
-import { DeleteOutlined } from '@ant-design/icons';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Alert, App, Button, Input, Progress, Space } from 'antd';
+import type { InputRef } from 'antd';
+import { DeleteOutlined, SearchOutlined } from '@ant-design/icons';
+import ResultsCard from '@/components/ResultsCard';
 import type { NodeModulesItem } from '@shared/task-types';
 import CleanerHeader from './components/CleanerHeader';
 import CleanerToolbar from './components/CleanerToolbar';
@@ -30,7 +32,10 @@ import './index.less';
  * Node Modules 清理页容器，负责串联 Electron IPC、页面状态和业务组件。
  */
 export default function CleanerPage() {
+  const { modal, message } = App.useApp();
   const [rootPath, setRootPath] = useState('');
+  const [resultQuery, setResultQuery] = useState('');
+  const filterRef = useRef<InputRef>(null);
   const [items, setItems] = useState<NodeModulesItem[]>([]);
   const protectedProjectsModalRef = useRef<ProtectedProjectsModalRef>(null);
   const ignoredProjectsModalRef = useRef<IgnoredProjectsModalRef>(null);
@@ -52,6 +57,15 @@ export default function CleanerPage() {
     sizedCount,
     visibleItems,
   } = useNodeModulesSelection(items, ignoredProjects, protectedProjects);
+  const normalizedQuery = resultQuery.trim().toLowerCase();
+  const matchedItems = useMemo(() => normalizedQuery
+    ? visibleItems.filter(({ projectName, nodeModulesPath }) =>
+        projectName.toLowerCase().includes(normalizedQuery) || nodeModulesPath.toLowerCase().includes(normalizedQuery))
+    : visibleItems, [normalizedQuery, visibleItems]);
+  const matchedIds = useMemo(() => new Set(matchedItems.map(item => item.id)), [matchedItems]);
+  // 筛选仅改变当前显示的结果，筛选外的已选项目会保留并在删除前明确提示。
+  const hiddenSelectedCount = selectedDeletableItems.filter(item => !matchedIds.has(item.id)).length;
+  const selectionScope = hiddenSelectedCount ? `其中 ${hiddenSelectedCount} 项在当前筛选之外。` : '';
   const electronApiAvailable = Boolean(window.clearNodeModules);
   const deleteTask = useDeleteTask(getElectronApi);
   const scanTask = useScanTask({
@@ -123,7 +137,8 @@ export default function CleanerPage() {
   }
 
   function handleClearHistory() {
-    Modal.confirm({
+    modal.confirm({
+      autoFocusButton: 'cancel',
       title: '确认清空历史目录',
       content: '清空后不会影响已扫描结果，也不会删除任何文件。',
       okText: '清空',
@@ -133,12 +148,18 @@ export default function CleanerPage() {
     });
   }
 
+  function clearResultFilter() {
+    setResultQuery('');
+    filterRef.current?.focus();
+  }
+
   function confirmTrashDelete() {
-    Modal.confirm({
+    modal.confirm({
+      autoFocusButton: 'cancel',
       title: '确认移入回收站',
       content: `将把 ${selectedDeletableItems.length} 个 node_modules 移入系统回收站，预计释放 ${formatBytes(
         selectedSize,
-      )}。`,
+      )}。${selectionScope}`,
       okText: '移入回收站',
       cancelText: '取消',
       okButtonProps: { danger: true },
@@ -147,7 +168,7 @@ export default function CleanerPage() {
   }
 
   function handleShowDeleteError(item: NodeModulesItem) {
-    Modal.info({
+    modal.info({
       title: '删除失败原因',
       width: 720,
       content: <DeleteFailureDetail item={item} onPermanentDelete={handlePermanentDeleteSingleItem} />,
@@ -156,7 +177,8 @@ export default function CleanerPage() {
   }
 
   function handlePermanentDeleteSingleItem(item: NodeModulesItem) {
-    Modal.confirm({
+    modal.confirm({
+      autoFocusButton: 'cancel',
       title: '确认永久删除该项',
       content: `将永久删除 ${item.nodeModulesPath}，该操作无法从系统回收站恢复。`,
       okText: '永久删除',
@@ -167,7 +189,7 @@ export default function CleanerPage() {
   }
 
   return (
-    <main className="cleaner-page">
+    <section className="cleaner-page">
       <CleanerHeader
         electronApiAvailable={electronApiAvailable}
         onOpenIgnoredProjects={() => ignoredProjectsModalRef.current?.open()}
@@ -188,48 +210,93 @@ export default function CleanerPage() {
         disabled={!electronApiAvailable}
       />
 
-      <section className="cleaner-page__notice-summary">
-        {hasNotice ? (
-          <div className="cleaner-page__notice-list">
-            {!electronApiAvailable ? (
-              <Alert
-                className="cleaner-page__alert"
-                type="warning"
-                message="当前页面未连接 Electron 能力，请在 Electron 应用窗口中使用目录选择、扫描和删除功能。"
-                showIcon
-              />
-            ) : null}
+      {hasNotice ? (
+        <div className="cleaner-page__notice-list">
+          {!electronApiAvailable ? (
+            <Alert
+              className="cleaner-page__alert"
+              type="warning"
+              message="请在 Electron 应用窗口中使用目录选择、扫描和删除功能。"
+              showIcon
+            />
+          ) : null}
+          {scanTask.scanMessage ? (
+            <Alert className="cleaner-page__alert" type="warning" message={scanTask.scanMessage} showIcon />
+          ) : null}
+        </div>
+      ) : null}
 
-            {scanTask.scanMessage ? (
-              <Alert className="cleaner-page__alert" type="warning" message={scanTask.scanMessage} showIcon />
+      <ResultsCard
+        fill={matchedItems.length > 0}
+        title={(
+          <div className="cleaner-page__results-title">
+            <h2>扫描结果</h2>
+            <span role="status">
+              {normalizedQuery ? `显示 ${matchedItems.length} / ${visibleItems.length} 项` : `${visibleItems.length} 个项目`}
+            </span>
+            {sizedCount < visibleItems.length ? (
+              <div className="cleaner-page__progress">
+                <span>容量统计</span>
+                <Progress size="small" percent={Math.round(sizedCount / visibleItems.length * 100)} />
+              </div>
             ) : null}
           </div>
-        ) : null}
-
-        <SummaryBar
-          totalCount={visibleItems.length}
-          selectedCount={selectedDeletableItems.length}
-          selectedSize={selectedSize}
-          sizedCount={sizedCount}
+        )}
+        extra={(
+          <Input
+            className="cleaner-page__filter"
+            ref={filterRef}
+            prefix={<SearchOutlined />}
+            aria-label="筛选项目"
+            placeholder="筛选项目或路径"
+            value={resultQuery}
+            allowClear
+            onChange={(event) => setResultQuery(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Escape' && resultQuery) {
+                event.preventDefault();
+                clearResultFilter();
+              }
+            }}
+          />
+        )}
+      >
+        <ResultsTable
+          items={matchedItems}
+          filter={normalizedQuery}
+          onClearFilter={clearResultFilter}
+          protectedProjects={protectedProjects}
+          selectedRowKeys={selectedRowKeys}
+          onSelectedRowKeysChange={setSelectedRowKeys}
+          onIgnore={ignoredProjectsActions.handleIgnoreItem}
+          onShowError={handleShowDeleteError}
         />
-      </section>
+      </ResultsCard>
+
+      <div className="cleaner-page__delete-task">
+        <DeleteTaskFooter
+          deleteTaskId={deleteTask.deleteTaskId}
+          deleteTaskStatus={deleteTask.deleteTaskStatus}
+          progress={deleteTask.deleteProgress}
+          currentDeleteItem={currentDeleteItem}
+          onPauseDelete={() => void deleteTask.handlePauseDelete()}
+          onResumeDelete={() => void deleteTask.handleResumeDelete()}
+          onFinishDelete={() => void deleteTask.handleFinishDelete()}
+        />
+      </div>
 
       <section className="cleaner-page__actions">
-        <div className="cleaner-page__delete-task">
-          <DeleteTaskFooter
-            deleteTaskId={deleteTask.deleteTaskId}
-            deleteTaskStatus={deleteTask.deleteTaskStatus}
-            progress={deleteTask.deleteProgress}
-            currentDeleteItem={currentDeleteItem}
-            onPauseDelete={() => void deleteTask.handlePauseDelete()}
-            onResumeDelete={() => void deleteTask.handleResumeDelete()}
-            onFinishDelete={() => void deleteTask.handleFinishDelete()}
-          />
-        </div>
-
+        <SummaryBar
+          selectedCount={selectedDeletableItems.length}
+          selectedSize={selectedSize}
+          hiddenSelectedCount={hiddenSelectedCount}
+          onClear={() => {
+            setSelectedRowKeys([]);
+            filterRef.current?.focus();
+          }}
+        />
         <Space className="cleaner-page__delete-actions">
           <Button
-            danger
             icon={<DeleteOutlined />}
             disabled={!electronApiAvailable || !selectedDeletableItems.length}
             onClick={confirmTrashDelete}
@@ -237,6 +304,7 @@ export default function CleanerPage() {
             移入回收站
           </Button>
           <Button
+            type="text"
             danger
             disabled={!electronApiAvailable || !selectedDeletableItems.length}
             onClick={() => deleteConfirmModalRef.current?.open()}
@@ -246,19 +314,11 @@ export default function CleanerPage() {
         </Space>
       </section>
 
-      <ResultsTable
-        items={visibleItems}
-        protectedProjects={protectedProjects}
-        selectedRowKeys={selectedRowKeys}
-        onSelectedRowKeysChange={setSelectedRowKeys}
-        onIgnore={ignoredProjectsActions.handleIgnoreItem}
-        onShowError={handleShowDeleteError}
-      />
-
       <DeleteConfirmModal
         ref={deleteConfirmModalRef}
         selectedCount={selectedDeletableItems.length}
         selectedSize={selectedSize}
+        hiddenSelectedCount={hiddenSelectedCount}
         onConfirm={() => {
           void deleteTask.startDeleteItems(selectedDeletableItems, 'permanent');
         }}
@@ -287,6 +347,6 @@ export default function CleanerPage() {
         onRestore={ignoredProjectsActions.handleRestoreIgnoredProject}
         onClear={ignoredProjectsActions.handleClearIgnoredProjects}
       />
-    </main>
+    </section>
   );
 }

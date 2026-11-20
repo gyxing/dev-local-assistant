@@ -1,13 +1,36 @@
 import { useEffect, useRef, useState } from 'react';
+import { App, ConfigProvider } from 'antd';
+import type { ThemeConfig } from 'antd';
 import { DESKTOP_NOTES_HIGHLIGHT_DURATION_MS } from '../../../shared/desktop-notes-state';
 import NoteSurface from './components/NoteSurface';
 import { useDesktopNotes } from './useDesktopNotes';
 import './index.less';
 
+const noteTheme = {
+  token: {
+    fontFamily: '"Segoe UI", "Microsoft YaHei UI", system-ui, sans-serif',
+    colorPrimary: '#886129',
+    colorText: '#3F3A33',
+    colorBgContainer: '#FFFCF4',
+    colorBgElevated: '#FFFCF4',
+    colorBorder: '#DED1BA',
+    borderRadius: 7,
+  },
+} satisfies ThemeConfig;
+
+/** 为透明便利贴窗口及其设置面板提供独立配色。 */
+export default function DesktopNotesPage() {
+  return (
+    <ConfigProvider theme={noteTheme}>
+      <App component={false}><DesktopNotesWindow /></App>
+    </ConfigProvider>
+  );
+}
+
 /**
  * 便利贴透明窗口。背景只在这个路由上清空，避免主工具窗口变成透明。
  */
-export default function DesktopNotesPage() {
+function DesktopNotesWindow() {
   const store = useDesktopNotes();
   const [highlighting, setHighlighting] = useState(false);
   const [highlightSize, setHighlightSize] = useState('');

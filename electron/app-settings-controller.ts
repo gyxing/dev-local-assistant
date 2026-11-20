@@ -1,8 +1,9 @@
 import { app } from 'electron';
-import type {
-  AppSettingsPreferences,
-  AppSettingsSnapshot,
-  AppSettingsUpdate,
+import {
+  isMainWindowTheme,
+  type AppSettingsPreferences,
+  type AppSettingsSnapshot,
+  type AppSettingsUpdate,
 } from '../shared/app-settings-types';
 import { DEFAULT_APP_RUNTIME_PREFERENCES } from '../shared/task-types';
 import type { ConfigService } from './services/config-service';
@@ -13,6 +14,7 @@ export const BACKGROUND_LAUNCH_ARG = '--background';
 /** 管理工具箱的应用级运行偏好和 Windows 登录项。 */
 export class AppSettingsController {
   private preferences: AppSettingsPreferences = {
+    mainWindowTheme: DEFAULT_APP_RUNTIME_PREFERENCES.mainWindowTheme,
     launchAtLogin: DEFAULT_APP_RUNTIME_PREFERENCES.launchAtLogin,
     quitWhenMainWindowCloses: DEFAULT_APP_RUNTIME_PREFERENCES.quitWhenMainWindowCloses,
   };
@@ -85,8 +87,8 @@ export class AppSettingsController {
     return process.platform === 'win32' && app.isPackaged;
   }
 
-  private updatePreferences({ launchAtLogin, quitWhenMainWindowCloses }: AppSettingsPreferences) {
-    this.preferences = { launchAtLogin, quitWhenMainWindowCloses };
+  private updatePreferences({ mainWindowTheme, launchAtLogin, quitWhenMainWindowCloses }: AppSettingsPreferences) {
+    this.preferences = { mainWindowTheme, launchAtLogin, quitWhenMainWindowCloses };
   }
 
   private applyLoginItem(enabled: boolean) {
@@ -114,7 +116,7 @@ export class AppSettingsController {
   }
 }
 
-/** 应用设置 IPC 只接受这两个布尔字段，便签窗口状态由其控制器维护。 */
+/** 应用设置只更新白名单字段，便签窗口状态由其控制器维护。 */
 function validateUpdate(input: unknown): AppSettingsUpdate {
   if (!input || typeof input !== 'object' || Array.isArray(input)) {
     throw new TypeError('系统设置更新内容无效');
@@ -122,10 +124,15 @@ function validateUpdate(input: unknown): AppSettingsUpdate {
 
   const patch: AppSettingsUpdate = {};
   for (const [key, value] of Object.entries(input)) {
-    if ((key !== 'launchAtLogin' && key !== 'quitWhenMainWindowCloses') || typeof value !== 'boolean') {
-      throw new TypeError('系统设置更新字段无效');
+    if (key === 'mainWindowTheme' && isMainWindowTheme(value)) {
+      patch.mainWindowTheme = value;
+      continue;
     }
-    patch[key] = value;
+    if ((key === 'launchAtLogin' || key === 'quitWhenMainWindowCloses') && typeof value === 'boolean') {
+      patch[key] = value;
+      continue;
+    }
+    throw new TypeError('系统设置更新字段无效');
   }
   if (Object.keys(patch).length === 0) {
     throw new TypeError('请选择要更新的系统设置');

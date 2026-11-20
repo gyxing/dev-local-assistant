@@ -10,6 +10,7 @@ interface OverflowPanelProps {
 export default function OverflowPanel({ notes, maxLines, onSelect }: OverflowPanelProps) {
   return (
     <aside className="overflow-panel" aria-label="收纳贴纸">
+      <strong className="overflow-panel__title">收纳贴纸</strong>
       {notes.map((note) => (
         <button key={note.id} className="overflow-item" type="button" onClick={() => onSelect(note)}>
           <span style={{ WebkitLineClamp: maxLines }}>{note.text}</span>

@@ -1,8 +1,6 @@
-import { Button, Space, Typography } from 'antd';
+import { Button } from 'antd';
 import { EyeInvisibleOutlined, SettingOutlined } from '@ant-design/icons';
-import './index.less';
-
-const { Text, Title } = Typography;
+import WorkspacePageHeader from '@/pages/developer-assistant/components/WorkspacePageHeader';
 
 interface CleanerHeaderProps {
   electronApiAvailable: boolean;
@@ -19,21 +17,17 @@ export default function CleanerHeader({
   onOpenProtectedProjects,
 }: CleanerHeaderProps) {
   return (
-    <header className="cleaner-header">
-      <div>
-        <Title className="cleaner-header__title" level={3}>
-          Node Modules 清理器
-        </Title>
-        <Text type="secondary">选择目录，扫描项目依赖，并安全地批量释放磁盘空间。</Text>
-      </div>
-      <Space>
+    <WorkspacePageHeader
+      title="依赖清理"
+      description="扫描指定目录下的 node_modules，按项目释放磁盘空间。"
+      actions={<>
         <Button icon={<EyeInvisibleOutlined />} disabled={!electronApiAvailable} onClick={onOpenIgnoredProjects}>
           忽略项目
         </Button>
         <Button icon={<SettingOutlined />} disabled={!electronApiAvailable} onClick={onOpenProtectedProjects}>
           保护项目
         </Button>
-      </Space>
-    </header>
+      </>}
+    />
   );
 }

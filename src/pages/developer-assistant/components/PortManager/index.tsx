@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, Input, Modal, Space, Table, Tag, Typography, message } from 'antd';
+import { App, Button, Card, Input, Space, Table, Tag, Typography } from 'antd';
 import { CopyOutlined, DeleteOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
 import type { ReactNode } from 'react';
 import type { TableColumnsType } from 'antd';
@@ -9,6 +9,8 @@ import type {
 } from '../../../../../shared/developer-tools-types';
 import { groupPortUsages } from './port-usage-group';
 import type { PortUsageGroup } from './port-usage-group';
+import ResultsCard from '@/components/ResultsCard';
+import WorkspacePageHeader from '../WorkspacePageHeader';
 import './index.less';
 
 const { Text } = Typography;
@@ -84,13 +86,13 @@ function renderApplicationInfo(group: PortUsageGroup): ReactNode {
         <Text strong className="port-manager__application-name" ellipsis={{ tooltip: processName }}>
           {processName}
         </Text>
-        <Text type="secondary" className="port-manager__application-pid">
+        <Text type="secondary" className="port-manager__application-pid toolbox-mono">
           PID {group.pid}
         </Text>
       </div>
       <Text
         type="secondary"
-        className="port-manager__application-command"
+        className="port-manager__application-command toolbox-mono"
         ellipsis={{ tooltip: applicationCommand }}
       >
         {applicationCommand}
@@ -102,7 +104,7 @@ function renderApplicationInfo(group: PortUsageGroup): ReactNode {
 function renderPortUsageDetails(group: PortUsageGroup): ReactNode {
   return (
     <Table<PortUsageItem>
-      className="port-manager__details-table"
+      className="toolbox-data-table port-manager__details-table"
       rowKey="id"
       columns={DETAIL_COLUMNS}
       dataSource={group.items}
@@ -116,7 +118,9 @@ function renderPortUsageDetails(group: PortUsageGroup): ReactNode {
  * 端口占用管理器，帮助开发者定位并结束本地开发端口对应进程。
  */
 export default function PortManager() {
+  const { message, modal } = App.useApp();
   const [portText, setPortText] = useState('');
+  const [hasQueried, setHasQueried] = useState(false);
   const [items, setItems] = useState<PortUsageItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [killingPid, setKillingPid] = useState<number>();
@@ -137,6 +141,7 @@ export default function PortManager() {
     try {
       const nextItems = await api.listPortUsages(query);
       setItems(nextItems);
+      setHasQueried(true);
       setLastQuery(query);
     } catch (error: unknown) {
       message.error(error instanceof Error ? error.message : '查询端口占用失败');
@@ -171,7 +176,8 @@ export default function PortManager() {
   }
 
   function confirmKillProcess(item: PortUsageGroup) {
-    Modal.confirm({
+    modal.confirm({
+      autoFocusButton: 'cancel',
       title: `确认结束进程 ${item.pid}`,
       content: `端口 ${item.localPort} 当前由 ${item.processName || '未知进程'} 占用。结束进程可能中断正在运行的服务。`,
       okText: '结束进程',
@@ -259,71 +265,77 @@ export default function PortManager() {
 
   return (
     <section className="port-manager">
-      <header className="port-manager__header">
-        <div className="port-manager__heading">
-          <Text strong>端口占用管理器</Text>
-          <Text type="secondary" className="port-manager__subtitle">
-            查询常用开发端口，必要时结束占用进程
-          </Text>
-        </div>
-        <Space wrap>
-          <Input
-            className="port-manager__input"
-            value={portText}
-            aria-label="端口号，留空查询全部"
-            placeholder="端口号，留空查询全部"
-            disabled={loading}
-            onChange={(event) => setPortText(event.target.value)}
-            onPressEnter={handleSearchPort}
-          />
-          <Button
-            icon={<SearchOutlined />}
-            loading={loading}
-            disabled={!apiAvailable}
-            onClick={handleSearchPort}
-          >
-            查询端口
-          </Button>
-          <Button
-            icon={<ReloadOutlined />}
-            loading={loading}
-            disabled={!apiAvailable}
-            onClick={() => listPortUsages({ ports: COMMON_PORTS, scope: 'all' })}
-          >
-            扫描常用端口
-          </Button>
-        </Space>
-      </header>
-
-      <div className="port-manager__quick-ports">
-        {COMMON_PORTS.map((port) => (
-          <Button
-            key={port}
-            size="small"
-            disabled={!apiAvailable || loading}
-            onClick={() => listPortUsages({ ports: [port], scope: 'all' })}
-          >
-            {port}
-          </Button>
-        ))}
-      </div>
-
-      <Table<PortUsageGroup>
-        className="port-manager__table"
-        rowKey="id"
-        columns={columns}
-        dataSource={groupedItems}
-        loading={loading}
-        size="small"
-        tableLayout="fixed"
-        scroll={{ y: '100%' }}
-        pagination={false}
-        expandable={{
-          columnWidth: 40,
-          expandedRowRender: renderPortUsageDetails,
-          rowExpandable: (group) => group.items.length > 1,
-        }}
+      <WorkspacePageHeader
+        title="端口管理"
+        description="查看本地主机的端口占用和对应进程。"
       />
+
+      <Card size="small">
+        <div className="toolbox-toolbar port-manager__query">
+          <Space wrap>
+            <Input
+              className="port-manager__input"
+              value={portText}
+              aria-label="端口号，留空查询全部"
+              placeholder="端口号，留空查询全部"
+              disabled={loading}
+              onChange={(event) => setPortText(event.target.value)}
+              onPressEnter={handleSearchPort}
+            />
+            <Button
+              type="primary"
+              icon={<SearchOutlined />}
+              loading={loading}
+              disabled={!apiAvailable}
+              onClick={handleSearchPort}
+            >
+              查询端口
+            </Button>
+            <Button
+              icon={<ReloadOutlined />}
+              loading={loading}
+              disabled={!apiAvailable}
+              onClick={() => listPortUsages({ ports: COMMON_PORTS, scope: 'all' })}
+            >
+              扫描常用端口
+            </Button>
+          </Space>
+        </div>
+
+        <div className="port-manager__quick-ports">
+          {COMMON_PORTS.map((port) => (
+            <Button
+              key={port}
+              size="small"
+              disabled={!apiAvailable || loading}
+              onClick={() => listPortUsages({ ports: [port], scope: 'all' })}
+            >
+              {port}
+            </Button>
+          ))}
+        </div>
+
+      </Card>
+
+      <ResultsCard title="占用列表" fill={groupedItems.length > 0}>
+        <Table<PortUsageGroup>
+          className={`toolbox-data-table${groupedItems.length ? ' toolbox-fill-table' : ''}`}
+          rowKey="id"
+          columns={columns}
+          dataSource={groupedItems}
+          loading={loading}
+          size="small"
+          tableLayout="fixed"
+          scroll={{ x: 680, y: '100%' }}
+          locale={{ emptyText: hasQueried ? '未发现匹配的端口占用。' : '输入端口号或扫描常用端口。' }}
+          pagination={false}
+          expandable={{
+            columnWidth: 40,
+            expandedRowRender: renderPortUsageDetails,
+            rowExpandable: (group) => group.items.length > 1,
+          }}
+        />
+      </ResultsCard>
     </section>
   );
 }

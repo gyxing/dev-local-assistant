@@ -53,6 +53,7 @@ export interface AppRuntimePreferences extends AppSettingsPreferences {
 }
 
 export const DEFAULT_APP_RUNTIME_PREFERENCES: AppRuntimePreferences = {
+  mainWindowTheme: 'system',
   launchAtLogin: false,
   quitWhenMainWindowCloses: false,
   notesWindowOpen: false,

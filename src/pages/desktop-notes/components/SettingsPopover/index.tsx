@@ -1,5 +1,7 @@
 import { CloseOutlined } from '@ant-design/icons';
-import { Button, InputNumber, Segmented, Slider, Switch } from 'antd';
+import { Button, InputNumber, Segmented, Slider } from 'antd';
+import StatusSwitch from '@/components/StatusSwitch';
+import { useEffect, useRef } from 'react';
 import type { DesktopNoteSettings } from '../../../../../shared/desktop-notes-types';
 
 interface SettingsPopoverProps {
@@ -14,11 +16,17 @@ const FIXED_OPTIONS = [1, 2, 3, 5];
  * 便利贴窗口内的显示设置。数量和行数允许超出固定档位，范围限制在 1 到 20。
  */
 export default function SettingsPopover({ settings, onChange, onClose }: SettingsPopoverProps) {
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => { closeButtonRef.current?.focus(); }, []);
   return (
-    <aside className="settings-popover" aria-label="显示设置">
+    <aside
+      className="settings-popover"
+      aria-label="显示设置"
+      onKeyDown={(event) => { if (event.key === 'Escape') onClose(); }}
+    >
       <div className="settings-header">
         <strong>显示设置</strong>
-        <Button type="text" size="small" aria-label="关闭设置" icon={<CloseOutlined />} onClick={onClose} />
+        <Button ref={closeButtonRef} type="text" size="small" aria-label="关闭设置" icon={<CloseOutlined />} onClick={onClose} />
       </div>
 
       <SettingNumber
@@ -34,8 +42,9 @@ export default function SettingsPopover({ settings, onChange, onClose }: Setting
 
       <label className="settings-check">
         <span>只显示置顶贴纸</span>
-        <Switch
+        <StatusSwitch
           size="small"
+          aria-label="只显示置顶贴纸"
           checked={settings.showPinnedOnly}
           onChange={(checked) => onChange({ showPinnedOnly: checked })}
         />
@@ -44,6 +53,7 @@ export default function SettingsPopover({ settings, onChange, onClose }: Setting
       <label className="settings-slider">
         <span>透明度</span>
         <Slider
+          ariaLabelForHandle="透明度"
           min={0.35}
           max={1}
           step={0.05}
@@ -56,6 +66,7 @@ export default function SettingsPopover({ settings, onChange, onClose }: Setting
       <label className="settings-slider">
         <span>字号</span>
         <Slider
+          ariaLabelForHandle="字号"
           min={12}
           max={28}
           step={1}
@@ -74,17 +85,16 @@ interface SettingNumberProps {
 }
 
 function SettingNumber({ label, value, onChange }: SettingNumberProps) {
-  const selectedOption = FIXED_OPTIONS.includes(value) ? String(value) : undefined;
-
   return (
     <div className="settings-row">
       <span>{label}</span>
       <div className="settings-number">
-        <Segmented
+        <Segmented<number>
+          aria-label={label}
           size="small"
-          options={FIXED_OPTIONS.map((option) => ({ label: String(option), value: String(option) }))}
-          value={selectedOption}
-          onChange={(nextValue) => onChange(Number(nextValue))}
+          options={FIXED_OPTIONS}
+          value={value}
+          onChange={onChange}
         />
         <InputNumber
           size="small"

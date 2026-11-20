@@ -7,7 +7,7 @@ interface OverflowTagProps {
 /** 右下角收纳入口，只在存在隐藏贴纸时显示。 */
 export default function OverflowTag({ count, active, onClick }: OverflowTagProps) {
   return (
-    <button className={`overflow-tag${active ? ' is-active' : ''}`} type="button" onClick={onClick}>
+    <button className="overflow-tag" aria-expanded={active} type="button" onClick={onClick}>
       还有 {count} 条
     </button>
   );

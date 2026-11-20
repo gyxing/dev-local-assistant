@@ -1,57 +1,49 @@
 .system-settings {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--toolbox-gap);
   height: 100%;
   min-width: 0;
   overflow: auto;
+  scrollbar-width: thin;
 }
 
-.system-settings__header {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+.system-settings > .ant-card {
+  flex: none;
+  width: min(100%, 860px);
 }
 
-.system-settings__title {
-  margin-bottom: 0 !important;
-  font-size: 15px !important;
-  line-height: 20px !important;
+.system-settings .toolbox-setting-row {
+  padding-inline: 3px;
+  border-radius: 0;
+  background: none;
+}
+
+.system-settings .toolbox-setting-row + .toolbox-setting-row {
+  padding-top: 9px;
+  border-top: 1px solid var(--toolbox-divider);
 }
 
 .system-settings__group {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.system-settings__row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px 16px;
-  min-height: 56px;
-  padding: 8px 10px;
-  border: 1px solid var(--cleaner-border-soft);
-  border-radius: 8px;
-  background: var(--cleaner-surface-soft);
+  display: grid;
+  gap: 2px;
 }
 
 .system-settings__description {
   display: flex;
   flex: 1 1 240px;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
   min-width: 0;
 }
 
 .system-settings__hint {
   font-size: 12px;
-  line-height: 17px;
+  line-height: 1.55;
 }
 
 .system-settings__control {
   flex: 0 0 auto;
   margin-inline-start: auto;
+  max-width: 100%;
 }

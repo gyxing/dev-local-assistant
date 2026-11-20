@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { message } from 'antd';
+import { App } from 'antd';
 import type { Dispatch, SetStateAction } from 'react';
 import type { NodeModulesItem, ScanTaskStatus } from '@shared/task-types';
 import type { ClearNodeModulesApi } from '../../../types/electron-api';
@@ -23,6 +23,7 @@ export default function useScanTask({
   setItems,
   setSelectedRowKeys,
 }: UseScanTaskOptions) {
+  const { message } = App.useApp();
   const [scanTaskId, setScanTaskId] = useState<string>();
   const [scanStatus, setScanStatus] = useState<ScanTaskStatus>('idle');
   const [scanMessage, setScanMessage] = useState('');

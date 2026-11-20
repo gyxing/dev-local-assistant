@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
-import { Form, Input, Modal, Select, Switch } from 'antd';
+import { Form, Input, Modal, Select } from 'antd';
+import StatusSwitch from '@/components/StatusSwitch';
 import type { HostsEntry } from '../../../../../shared/network-tools-types';
 
 interface HostsEntryFormValue {
@@ -72,7 +73,7 @@ export default function HostsEntryModal({
     >
       <Form form={form} layout="vertical" preserve={false}>
         <Form.Item label="状态" name="enabled" valuePropName="checked">
-          <Switch checkedChildren="启用" unCheckedChildren="停用" />
+          <StatusSwitch aria-label="启用 Hosts 记录" onLabel="已启用" offLabel="已停用" />
         </Form.Item>
         <Form.Item
           label="IP 地址"

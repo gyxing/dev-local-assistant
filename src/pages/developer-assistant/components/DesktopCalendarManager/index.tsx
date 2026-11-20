@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Button, Card, InputNumber, Segmented, Select, Slider, Switch, Tag, Typography, message } from 'antd';
+import { App, Button, Card, InputNumber, Segmented, Select, Slider, Space, Tag, Typography } from 'antd';
 import {
   ArrowDownOutlined,
+  CalendarOutlined,
+  DesktopOutlined,
+  SettingOutlined,
   ArrowLeftOutlined,
   ArrowRightOutlined,
   ArrowUpOutlined,
@@ -21,9 +24,11 @@ import type {
   DesktopCalendarSettings,
   DesktopCalendarSnapshot,
 } from '../../../../../shared/desktop-calendar-types';
+import StatusSwitch from '@/components/StatusSwitch';
+import WorkspacePageHeader from '../WorkspacePageHeader';
 import './index.less';
 
-const { Text, Title } = Typography;
+const { Text } = Typography;
 const POSITION_STEP = 20;
 
 /** 说明网络时间与本机时间的差值，方便判断校时是否生效。 */
@@ -52,6 +57,7 @@ function describeTimeSource(info?: CalendarTimeInfo) {
  * 桌面日历管理页：开关、显示项、透明度、窗口尺寸与位置。
  */
 export default function DesktopCalendarManager() {
+  const { message } = App.useApp();
   const [snapshot, setSnapshot] = useState<DesktopCalendarSnapshot>();
   const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState(false);
@@ -158,30 +164,27 @@ export default function DesktopCalendarManager() {
 
   return (
     <section className="desktop-calendar-manager">
-      <header className="desktop-calendar-manager__header">
-        <div className="desktop-calendar-manager__heading">
-          <div className="desktop-calendar-manager__title-row">
-            <Title level={5} className="desktop-calendar-manager__title">
-              桌面日历
-            </Title>
-            <Tag color={snapshot?.windowOpen ? 'success' : 'default'}>
-              {snapshot?.windowOpen ? '已显示' : '已隐藏'}
-            </Tag>
-          </div>
-          <Text type="secondary">纯展示窗口，点击穿透、不抢焦点，其他窗口会盖住它。</Text>
-        </div>
-      </header>
+      <WorkspacePageHeader
+        title="桌面日历"
+        description="调整桌面时钟与月历的显示内容、外观和位置。"
+        status={
+          <Tag color={snapshot?.windowOpen ? 'success' : 'default'}>
+            {snapshot?.windowOpen ? '已显示' : '已隐藏'}
+          </Tag>
+        }
+      />
 
-      <Card size="small" title="运行">
+      <Card size="small" title={<Space size={7}><CalendarOutlined />运行与校时</Space>}>
         <div className="desktop-calendar-manager__runtime">
-          <div className="desktop-calendar-manager__item">
+          <div className="toolbox-setting-row">
             <div className="desktop-calendar-manager__item-text">
               <Text strong>在桌面显示日历</Text>
               <Text type="secondary" className="desktop-calendar-manager__hint">
                 关闭后窗口隐藏，设置会保留。
               </Text>
             </div>
-            <Switch
+            <StatusSwitch
+              aria-label="在桌面显示日历"
               checked={settings?.enabled ?? false}
               loading={saving}
               disabled={!apiAvailable}
@@ -189,7 +192,7 @@ export default function DesktopCalendarManager() {
             />
           </div>
 
-          <div className="desktop-calendar-manager__item">
+          <div className="toolbox-setting-row">
             <div className="desktop-calendar-manager__item-text">
               <Text strong>时间源</Text>
               <Text type="secondary" className="desktop-calendar-manager__hint">
@@ -209,12 +212,13 @@ export default function DesktopCalendarManager() {
         </div>
       </Card>
 
-      <Card size="small" title="显示">
+      <Card size="small" title={<Space size={7}><SettingOutlined />显示设置</Space>}>
         <div className="desktop-calendar-manager__switches">
           <label className="desktop-calendar-manager__switch">
             <span>农历</span>
-            <Switch
+            <StatusSwitch
               size="small"
+              aria-label="农历"
               checked={settings?.showLunar ?? true}
               disabled={!apiAvailable}
               onChange={(checked) => void saveSettings({ showLunar: checked })}
@@ -222,8 +226,9 @@ export default function DesktopCalendarManager() {
           </label>
           <label className="desktop-calendar-manager__switch">
             <span>节气</span>
-            <Switch
+            <StatusSwitch
               size="small"
+              aria-label="节气"
               checked={settings?.showSolarTerms ?? true}
               disabled={!apiAvailable}
               onChange={(checked) => void saveSettings({ showSolarTerms: checked })}
@@ -231,8 +236,9 @@ export default function DesktopCalendarManager() {
           </label>
           <label className="desktop-calendar-manager__switch">
             <span>节日</span>
-            <Switch
+            <StatusSwitch
               size="small"
+              aria-label="节日"
               checked={settings?.showFestivals ?? true}
               disabled={!apiAvailable}
               onChange={(checked) => void saveSettings({ showFestivals: checked })}
@@ -240,8 +246,9 @@ export default function DesktopCalendarManager() {
           </label>
           <label className="desktop-calendar-manager__switch">
             <span>休班标记</span>
-            <Switch
+            <StatusSwitch
               size="small"
+              aria-label="休班标记"
               checked={settings?.showHolidayMarks ?? true}
               disabled={!apiAvailable}
               onChange={(checked) => void saveSettings({ showHolidayMarks: checked })}
@@ -249,39 +256,43 @@ export default function DesktopCalendarManager() {
           </label>
         </div>
 
-        <div className="desktop-calendar-manager__slider-row">
-          <Text className="desktop-calendar-manager__slider-label">背景不透明度</Text>
-          <Slider
-            className="desktop-calendar-manager__slider"
-            min={0}
-            max={1}
-            step={0.02}
-            value={settings?.opacity}
-            disabled={!apiAvailable}
-            onChange={(value) => updateDraft({ opacity: value })}
-            onChangeComplete={(value) => void saveSettings({ opacity: value })}
-          />
-          <Text className="desktop-calendar-manager__slider-value">
-            {settings ? `${Math.round(settings.opacity * 100)}%` : '-'}
-          </Text>
-        </div>
+        <div className="desktop-calendar-manager__appearance">
+          <div className="desktop-calendar-manager__slider-row">
+            <Text className="desktop-calendar-manager__slider-label">背景不透明度</Text>
+            <Slider
+              className="desktop-calendar-manager__slider"
+              ariaLabelForHandle="背景不透明度"
+              min={0}
+              max={1}
+              step={0.02}
+              value={settings?.opacity}
+              disabled={!apiAvailable}
+              onChange={(value) => updateDraft({ opacity: value })}
+              onChangeComplete={(value) => void saveSettings({ opacity: value })}
+            />
+            <Text className="desktop-calendar-manager__slider-value">
+              {settings ? `${Math.round(settings.opacity * 100)}%` : '-'}
+            </Text>
+          </div>
 
-        <div className="desktop-calendar-manager__theme-row">
-          <Text className="desktop-calendar-manager__slider-label">主题</Text>
-          <Segmented
-            size="small"
-            options={[
-              { label: '浅色', value: 'light' },
-              { label: '深色', value: 'dark' },
-            ]}
-            value={settings?.theme ?? 'light'}
-            disabled={!apiAvailable}
-            onChange={(value) => void saveSettings({ theme: value as CalendarTheme })}
-          />
+          <div className="desktop-calendar-manager__theme-row">
+            <Text className="desktop-calendar-manager__slider-label">主题</Text>
+            <Segmented<CalendarTheme>
+              aria-label="桌面日历主题"
+              size="small"
+              options={[
+                { label: '浅色', value: 'light' },
+                { label: '深色', value: 'dark' },
+              ]}
+              value={settings?.theme ?? 'light'}
+              disabled={!apiAvailable}
+              onChange={(value) => void saveSettings({ theme: value })}
+            />
+          </div>
         </div>
       </Card>
 
-      <Card size="small" title="窗口">
+      <Card size="small" title={<Space size={7}><DesktopOutlined />窗口位置</Space>}>
         <div className="desktop-calendar-manager__window">
           <div className="desktop-calendar-manager__window-fields">
             <label className="desktop-calendar-manager__field desktop-calendar-manager__field--display">
@@ -326,47 +337,50 @@ export default function DesktopCalendarManager() {
             </div>
           </div>
 
-          <div className="desktop-calendar-manager__dpad" aria-label="窗口位置">
-            <span />
-            <Button
-              size="small"
-              icon={<ArrowUpOutlined />}
-              aria-label="上移"
-              disabled={!apiAvailable}
-              onClick={() => nudge(0, -POSITION_STEP)}
-            />
-            <span />
-            <Button
-              size="small"
-              icon={<ArrowLeftOutlined />}
-              aria-label="左移"
-              disabled={!apiAvailable}
-              onClick={() => nudge(-POSITION_STEP, 0)}
-            />
-            <Button
-              size="small"
-              icon={<ReloadOutlined />}
-              aria-label="恢复右侧居中"
-              title="恢复右侧居中"
-              disabled={!apiAvailable}
-              onClick={() => void saveSettings({ x: CALENDAR_UNPOSITIONED, y: CALENDAR_UNPOSITIONED })}
-            />
-            <Button
-              size="small"
-              icon={<ArrowRightOutlined />}
-              aria-label="右移"
-              disabled={!apiAvailable}
-              onClick={() => nudge(POSITION_STEP, 0)}
-            />
-            <span />
-            <Button
-              size="small"
-              icon={<ArrowDownOutlined />}
-              aria-label="下移"
-              disabled={!apiAvailable}
-              onClick={() => nudge(0, POSITION_STEP)}
-            />
-            <span />
+          <div className="toolbox-position-panel">
+            <span>方向微调</span>
+            <div className="desktop-calendar-manager__dpad" role="group" aria-label="微调窗口位置">
+              <span />
+              <Button
+                size="small"
+                icon={<ArrowUpOutlined />}
+                aria-label="上移"
+                disabled={!apiAvailable}
+                onClick={() => nudge(0, -POSITION_STEP)}
+              />
+              <span />
+              <Button
+                size="small"
+                icon={<ArrowLeftOutlined />}
+                aria-label="左移"
+                disabled={!apiAvailable}
+                onClick={() => nudge(-POSITION_STEP, 0)}
+              />
+              <Button
+                size="small"
+                icon={<ReloadOutlined />}
+                aria-label="恢复右侧居中"
+                title="恢复右侧居中"
+                disabled={!apiAvailable}
+                onClick={() => void saveSettings({ x: CALENDAR_UNPOSITIONED, y: CALENDAR_UNPOSITIONED })}
+              />
+              <Button
+                size="small"
+                icon={<ArrowRightOutlined />}
+                aria-label="右移"
+                disabled={!apiAvailable}
+                onClick={() => nudge(POSITION_STEP, 0)}
+              />
+              <span />
+              <Button
+                size="small"
+                icon={<ArrowDownOutlined />}
+                aria-label="下移"
+                disabled={!apiAvailable}
+                onClick={() => nudge(0, POSITION_STEP)}
+              />
+              <span />
+            </div>
           </div>
         </div>
 

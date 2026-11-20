@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { message } from 'antd';
+import { App } from 'antd';
 import type { DirectoryHistoryItem, IgnoredProject, ProtectedProject } from '@shared/task-types';
 import type { ClearNodeModulesApi } from '../../../types/electron-api';
 import { createNextDirectoryHistory, getErrorMessage } from '../utils';
@@ -8,6 +8,7 @@ import { createNextDirectoryHistory, getErrorMessage } from '../utils';
  * 负责加载和持久化清理器配置，隔离 Electron 配置 IPC 与页面展示逻辑。
  */
 export default function useCleanerConfig(getElectronApi: () => ClearNodeModulesApi | undefined) {
+  const { message } = App.useApp();
   const [protectedProjects, setProtectedProjects] = useState<ProtectedProject[]>([]);
   const [directoryHistory, setDirectoryHistory] = useState<DirectoryHistoryItem[]>([]);
   const [ignoredProjects, setIgnoredProjects] = useState<IgnoredProject[]>([]);
@@ -28,7 +29,7 @@ export default function useCleanerConfig(getElectronApi: () => ClearNodeModulesA
       .catch((error: unknown) => {
         message.error(getErrorMessage(error, '读取保护项目配置失败'));
       });
-  }, []);
+  }, [message]);
 
   async function saveDirectoryHistory(targetPath: string, incrementScanCount: boolean) {
     const api = getElectronApi();

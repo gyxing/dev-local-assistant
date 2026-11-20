@@ -1,11 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
-import { Button, Card, Descriptions, Input, InputNumber, Modal, Popconfirm, Select, Slider, Space, Switch, Table, Tag, Typography, message } from 'antd';
+import { App, Button, Card, Descriptions, Input, InputNumber, Modal, Popconfirm, Select, Slider, Space, Table, Tag, Typography } from 'antd';
 import {
   ArrowDownOutlined,
   ArrowLeftOutlined,
   ArrowRightOutlined,
   ArrowUpOutlined,
   BorderOutlined,
+  DesktopOutlined,
+  FileTextOutlined,
+  PushpinOutlined,
+  SaveOutlined,
   CheckOutlined,
   CloseOutlined,
   PlayCircleOutlined,
@@ -28,9 +32,11 @@ import {
   placeNotesWindow,
 } from '../../../../../shared/desktop-notes-placement';
 import { formatBytes } from '../../../node-modules-cleaner/utils';
+import StatusSwitch from '@/components/StatusSwitch';
+import WorkspacePageHeader from '../WorkspacePageHeader';
 import './index.less';
 
-const { Text, Title } = Typography;
+const { Text } = Typography;
 
 // 方位图的键盘顺序按屏幕位置从上到下、从左到右。
 const anchorOrder: Record<DesktopNotesAnchor, number> = {
@@ -46,6 +52,7 @@ const positionPresets = listNotesWindowAnchors().sort((a, b) => anchorOrder[a.an
  * 在主工具里管理便利贴的配置、贴纸、窗口位置和本地缓存。
  */
 export default function DesktopNotesManager() {
+  const { message } = App.useApp();
   const [snapshot, setSnapshot] = useState<DesktopNotesSnapshot>();
   const [loading, setLoading] = useState(false);
   const [pendingAction, setPendingAction] = useState<'open' | 'close' | 'refresh'>();
@@ -251,6 +258,7 @@ export default function DesktopNotesManager() {
             编辑
           </Button>
           <Popconfirm
+            overlayClassName="desktop-notes-manager__delete-popover"
             title="删除这张贴纸？"
             description={note.text}
             okText="删除"
@@ -276,17 +284,11 @@ export default function DesktopNotesManager() {
 
   return (
     <section className="desktop-notes-manager">
-      <header className="desktop-notes-manager__header">
-        <div className="desktop-notes-manager__heading">
-          <div className="desktop-notes-manager__title-row">
-            <Title level={5} className="desktop-notes-manager__title">
-              桌面便利贴
-            </Title>
-            <Tag color={snapshot?.windowOpen ? 'success' : 'default'}>{snapshot?.windowOpen ? '已打开' : '已关闭'}</Tag>
-          </div>
-          <Text type="secondary">管理配置、贴纸、窗口位置和本地缓存。</Text>
-        </div>
-        <Space size={8} className="desktop-notes-manager__actions">
+      <WorkspacePageHeader
+        title="桌面便利贴"
+        description="管理贴纸内容、显示方式和窗口位置。"
+        status={<Tag color={snapshot?.windowOpen ? 'success' : 'default'}>{snapshot?.windowOpen ? '已打开' : '已关闭'}</Tag>}
+        actions={<>
           {snapshot?.windowOpen ? (
             <Button
               size="small"
@@ -318,29 +320,39 @@ export default function DesktopNotesManager() {
           >
             刷新
           </Button>
-        </Space>
-      </header>
+        </>}
+      />
 
-      <Card size="small" title="运行">
-        <div className="desktop-notes-manager__runtime-item">
-          <div className="desktop-notes-manager__runtime-copy">
-            <Text className="desktop-notes-manager__runtime-title">桌面模式</Text>
-            <Text type="secondary" className="desktop-notes-manager__hint">
-              置底、点击穿透、只读展示。可从托盘或这里关闭。
-            </Text>
+      <Card size="small" title={<Space size={7}><PushpinOutlined />运行与显示</Space>}>
+        <div className="desktop-notes-manager__toggles">
+          <div className="toolbox-setting-row">
+            <div className="desktop-notes-manager__runtime-copy">
+              <Text className="desktop-notes-manager__runtime-title">桌面模式</Text>
+              <Text type="secondary" className="desktop-notes-manager__hint">
+                置底、点击穿透、只读展示。可从托盘或这里关闭。
+              </Text>
+            </div>
+            <StatusSwitch
+              size="small"
+              aria-label="桌面模式"
+              className="desktop-notes-manager__runtime-switch"
+              checked={desktopMode}
+              loading={savingMode}
+              disabled={!apiAvailable || !snapshot}
+              onChange={(checked) => void updateDesktopMode(checked)}
+            />
           </div>
-          <Switch
-            aria-label="桌面模式"
-            className="desktop-notes-manager__runtime-switch"
-            checked={desktopMode}
-            loading={savingMode}
-            disabled={!apiAvailable || !snapshot}
-            onChange={(checked) => void updateDesktopMode(checked)}
-          />
+          <div className="toolbox-setting-row">
+            <Text className="desktop-notes-manager__runtime-title">只看置顶</Text>
+            <StatusSwitch
+              size="small"
+              aria-label="只看置顶"
+              disabled={!apiAvailable || !settingsDraft}
+              checked={settingsDraft?.showPinnedOnly ?? false}
+              onChange={(checked) => changeSettings({ showPinnedOnly: checked })}
+            />
+          </div>
         </div>
-      </Card>
-
-      <Card size="small" title="配置">
         <div className="desktop-notes-manager__settings">
           <label className="desktop-notes-manager__field">
             <span>最大显示</span>
@@ -372,18 +384,10 @@ export default function DesktopNotesManager() {
               }}
             />
           </label>
-          <label className="desktop-notes-manager__field desktop-notes-manager__field--switch">
-            <span>只看置顶</span>
-            <Switch
-              size="small"
-              disabled={!apiAvailable || !settingsDraft}
-              checked={settingsDraft?.showPinnedOnly ?? false}
-              onChange={(checked) => changeSettings({ showPinnedOnly: checked })}
-            />
-          </label>
           <label className="desktop-notes-manager__field">
             <span>透明度 {settingsDraft ? `${Math.round(settingsDraft.opacity * 100)}%` : ''}</span>
             <Slider
+              ariaLabelForHandle="透明度"
               min={0.35}
               max={1}
               step={0.05}
@@ -395,6 +399,7 @@ export default function DesktopNotesManager() {
           <label className="desktop-notes-manager__field">
             <span>字号 {settingsDraft ? `${settingsDraft.fontSize}px` : ''}</span>
             <Slider
+              ariaLabelForHandle="字号"
               min={12}
               max={28}
               step={1}
@@ -411,12 +416,12 @@ export default function DesktopNotesManager() {
             disabled={!apiAvailable || savingContent || !settingsDraft}
             onClick={applySettings}
           >
-            应用
+            应用显示设置
           </Button>
         </div>
       </Card>
 
-      <Card size="small" title="窗口">
+      <Card size="small" title={<Space size={7}><DesktopOutlined />窗口位置</Space>}>
         <div className="desktop-notes-manager__window">
           {snapshot?.windowOpen && !snapshot.desktopModeActive && snapshot.state.notes.length === 0 ? (
             <Text type="secondary" className="desktop-notes-manager__compact-hint">
@@ -480,11 +485,17 @@ export default function DesktopNotesManager() {
                     }}
                   />
                 </label>
+                <div className="desktop-notes-manager__field">
+                  <span>当前位置</span>
+                  <span className="desktop-notes-manager__coordinates">
+                    {boundsDraft ? `${Math.round(boundsDraft.x)}, ${Math.round(boundsDraft.y)}` : '—'}
+                  </span>
+                </div>
               </div>
             </div>
             <div className="desktop-notes-manager__position-tools">
-              <div className="desktop-notes-manager__position-tool">
-                <span className="desktop-notes-manager__position-label">位置预设</span>
+              <div className="toolbox-position-panel toolbox-position-panel--preset">
+                <span>位置预设</span>
                 <div className="desktop-notes-manager__anchors" role="group" aria-label="窗口位置预设">
                   {positionPresets.map(({ anchor, label }) => {
                     const selected = activeAnchor === anchor;
@@ -505,8 +516,8 @@ export default function DesktopNotesManager() {
                   })}
                 </div>
               </div>
-              <div className="desktop-notes-manager__position-tool">
-                <span className="desktop-notes-manager__position-label">微调</span>
+              <div className="toolbox-position-panel">
+                <span>方向微调</span>
                 <div className="desktop-notes-manager__dpad" role="group" aria-label="微调窗口位置">
                   <Button
                     className="desktop-notes-manager__direction desktop-notes-manager__direction--up"
@@ -579,15 +590,16 @@ export default function DesktopNotesManager() {
                   });
                 }}
               >
-                应用
+                应用位置
               </Button>
             </Space>
           </div>
         </div>
       </Card>
 
-      <Card size="small" className="desktop-notes-manager__data" title="数据">
+      <Card size="small" className="desktop-notes-manager__data" title={<Space size={7}><FileTextOutlined />贴纸列表</Space>}>
         <Table<DesktopNote>
+          className="toolbox-data-table"
           rowKey="id"
           size="small"
           tableLayout="fixed"
@@ -599,7 +611,7 @@ export default function DesktopNotesManager() {
         />
       </Card>
 
-      <Card size="small" title="缓存">
+      <Card size="small" title={<Space size={7}><SaveOutlined />本地缓存</Space>}>
         <Descriptions column={{ xs: 1, sm: 2, md: 3 }} size="small">
           <Descriptions.Item label="文件" span="filled">
             <span className="desktop-notes-manager__cache-path">{cache?.filePath ?? '-'}</span>
@@ -631,7 +643,7 @@ export default function DesktopNotesManager() {
         <Input.TextArea rows={4} value={editText} onChange={(event) => setEditText(event.target.value)} />
         <label className="desktop-notes-manager__edit-pin">
           <span>置顶</span>
-          <Switch size="small" checked={editPinned} onChange={setEditPinned} />
+          <StatusSwitch size="small" aria-label="置顶贴纸" checked={editPinned} onChange={setEditPinned} />
         </label>
       </Modal>
     </section>

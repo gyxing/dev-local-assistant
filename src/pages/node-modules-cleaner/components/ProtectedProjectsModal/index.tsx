@@ -1,10 +1,11 @@
 import { forwardRef, useEffect, useImperativeHandle, useState } from 'react';
 import type { Ref } from 'react';
-import { Button, Input, Modal, Space, Switch, Table, message } from 'antd';
+import { App, Button, Input, Modal, Space, Table } from 'antd';
 import type { TableColumnsType } from 'antd';
 import { DeleteOutlined, FolderAddOutlined, PlusOutlined } from '@ant-design/icons';
 import type { ProtectedProject } from '@shared/task-types';
 import { getPathName } from '../../utils';
+import StatusSwitch from '@/components/StatusSwitch';
 import './index.less';
 
 interface ProtectedProjectsModalProps {
@@ -25,6 +26,7 @@ function ProtectedProjectsModal({
   onSelectDirectory,
   onSave,
 }: ProtectedProjectsModalProps, ref: Ref<ProtectedProjectsModalRef>) {
+  const { message } = App.useApp();
   const [open, setOpen] = useState(false);
   const [draftProjects, setDraftProjects] = useState<ProtectedProject[]>([]);
   const [manualPath, setManualPath] = useState('');
@@ -104,7 +106,7 @@ function ProtectedProjectsModal({
       title: '启用',
       width: 80,
       render: (_, project) => (
-        <Switch
+        <StatusSwitch
           checked={project.enabled}
           onChange={(enabled) => updateProject(project.id, { enabled })}
           aria-label="启用保护项目"
@@ -160,6 +162,7 @@ function ProtectedProjectsModal({
         <Space.Compact className="protected-projects-modal__input">
           <Input
             value={manualPath}
+            aria-label="项目路径"
             placeholder="输入项目路径"
             onChange={(event) => setManualPath(event.target.value)}
             onPressEnter={() => {
@@ -181,6 +184,7 @@ function ProtectedProjectsModal({
           </Button>
         </Space.Compact>
         <Table<ProtectedProject>
+          className="toolbox-data-table"
           rowKey="id"
           columns={columns}
           dataSource={draftProjects}

@@ -37,6 +37,7 @@ export default function CalendarGrid({
         return (
           <div
             key={cell.isoDate}
+            aria-current={cell.isToday ? 'date' : undefined}
             className={[
               'desktop-calendar__day',
               cell.inMonth ? '' : 'is-outside',
@@ -47,7 +48,7 @@ export default function CalendarGrid({
               .join(' ')}
           >
             <span className="desktop-calendar__day-number">{cell.day}</span>
-            {subText ? <span className="desktop-calendar__day-sub">{subText}</span> : null}
+            {subText ? <span className="desktop-calendar__day-sub" title={subText}>{subText}</span> : null}
             {showHolidayMarks && holiday ? (
               <span className={`desktop-calendar__mark${holiday.isOffDay ? ' is-off' : ' is-work'}`}>
                 {holiday.isOffDay ? '休' : '班'}

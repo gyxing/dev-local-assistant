@@ -1,80 +1,35 @@
 .desktop-notes-manager {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--toolbox-gap);
   height: 100%;
   min-width: 0;
   min-height: 0;
   overflow: auto;
+  scrollbar-width: thin;
   // 按管理页可用宽度换列，侧栏展开时也能正确折行。
   container: desktop-notes-manager / inline-size;
 }
 
-.desktop-notes-manager__header {
-  display: flex;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  min-height: 36px;
+.desktop-notes-manager > .ant-card {
+  flex: none;
 }
 
-.desktop-notes-manager__actions {
-  flex: 0 0 auto;
-  white-space: nowrap;
+.desktop-notes-manager__toggles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+  margin-bottom: 9px;
 }
 
-.desktop-notes-manager__actions .ant-btn {
-  min-width: 88px;
-}
-
-.desktop-notes-manager__heading {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.desktop-notes-manager__title-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.desktop-notes-manager__title {
-  margin-bottom: 0 !important;
-  font-size: 15px !important;
-  line-height: 20px !important;
-}
-
-.desktop-notes-manager .ant-card-head {
-  min-height: 34px;
-  padding: 0 10px;
-  font-size: 13px;
-}
-
-.desktop-notes-manager .ant-card-head-title {
-  padding: 6px 0;
-}
-
-.desktop-notes-manager .ant-card-body {
-  padding: 10px;
-}
-
-.desktop-notes-manager__runtime-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  min-height: 60px;
-  padding: 8px 10px;
-  background: var(--cleaner-surface-soft);
-  border: 1px solid var(--cleaner-border-soft);
-  border-radius: 8px;
+.desktop-notes-manager__toggles .toolbox-setting-row {
+  flex-wrap: nowrap;
+  gap: 3px 7px;
 }
 
 .desktop-notes-manager__runtime-copy {
   display: flex;
+  flex: 1 1 0;
   flex-direction: column;
   gap: 2px;
   min-width: 0;
@@ -86,13 +41,13 @@
 
 .desktop-notes-manager__runtime-title {
   display: block;
-  color: var(--cleaner-text-strong);
+  color: var(--toolbox-text);
   font-weight: 600;
 }
 
 .desktop-notes-manager__settings {
   display: grid;
-  grid-template-columns: repeat(2, minmax(74px, 92px)) minmax(72px, 84px) repeat(2, minmax(116px, 1fr)) auto;
+  grid-template-columns: repeat(2, minmax(68px, 82px)) repeat(2, minmax(98px, 1fr)) auto;
   gap: 10px;
   align-items: end;
 }
@@ -126,7 +81,7 @@
 }
 
 .desktop-notes-manager__window-fields .desktop-notes-manager__field {
-  flex: 0 1 96px;
+  flex: 0 1 72px;
 }
 
 .desktop-notes-manager__position-tools {
@@ -134,21 +89,8 @@
   flex: 0 0 auto;
   flex-wrap: wrap;
   align-items: flex-start;
-  gap: 10px 32px;
+  gap: 12px 24px;
   max-width: 100%;
-}
-
-.desktop-notes-manager__position-tool {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-}
-
-.desktop-notes-manager__position-label {
-  color: var(--cleaner-text-muted);
-  font-size: 12px;
-  line-height: 18px;
 }
 
 /* 模拟屏幕上的四角与中央，其余格子留空。 */
@@ -158,18 +100,14 @@
     'top-left . top-right'
     '. center .'
     'bottom-left . bottom-right';
-  grid-template-columns: repeat(3, 28px);
-  grid-template-rows: repeat(3, 24px);
-  gap: 5px 12px;
-  padding: 4px;
-  border: 1px solid var(--cleaner-border-soft);
-  border-radius: 6px;
-  background: var(--cleaner-surface-soft);
+  grid-template-columns: repeat(3, 25px);
+  grid-template-rows: repeat(3, 23px);
+  gap: 6px;
 }
 
 .desktop-notes-manager__anchors .desktop-notes-manager__anchor {
-  width: 28px;
-  height: 24px;
+  width: 25px;
+  height: 23px;
   padding: 0;
 }
 
@@ -201,14 +139,14 @@
     '. up .'
     'left . right'
     '. down .';
-  grid-template-columns: repeat(3, 28px);
-  grid-template-rows: repeat(3, 28px);
-  gap: 4px;
+  grid-template-columns: repeat(3, 25px);
+  grid-template-rows: repeat(3, 23px);
+  gap: 6px;
 }
 
 .desktop-notes-manager__dpad .desktop-notes-manager__direction {
-  width: 28px;
-  height: 28px;
+  width: 25px;
+  height: 23px;
   padding: 0;
 }
 
@@ -234,7 +172,7 @@
   align-items: center;
   gap: 8px 12px;
   padding-top: 8px;
-  border-top: 1px solid var(--cleaner-border-soft);
+  border-top: 1px solid var(--toolbox-divider);
 }
 
 .desktop-notes-manager__window-actions {
@@ -253,7 +191,7 @@
 .desktop-notes-manager__compact-hint {
   padding: 4px 8px;
   border-radius: 6px;
-  background: var(--cleaner-surface-soft);
+  background: var(--toolbox-inset);
   font-size: 12px;
   line-height: 18px;
 }
@@ -263,7 +201,7 @@
   flex-direction: column;
   gap: 4px;
   min-width: 0;
-  color: var(--cleaner-text-muted);
+  color: var(--toolbox-muted);
   font-size: 12px;
 }
 
@@ -271,14 +209,9 @@
   width: 100%;
 }
 
-.desktop-notes-manager__field--switch {
-  align-items: flex-start;
-  justify-content: flex-end;
-}
-
 /* 显示器下拉需要更宽，避免选项文字被截断 */
 .desktop-notes-manager__window-fields .desktop-notes-manager__field--display {
-  flex-basis: 250px;
+  flex-basis: 214px;
   max-width: 100%;
 }
 
@@ -293,7 +226,6 @@
 }
 
 @container desktop-notes-manager (max-width: 480px) {
-  .desktop-notes-manager__header,
   .desktop-notes-manager__window-controls {
     flex-wrap: wrap;
   }
@@ -309,6 +241,12 @@
   .desktop-notes-manager__position-tools {
     margin-inline-start: auto;
   }
+}
+
+.desktop-notes-manager__coordinates {
+  color: var(--toolbox-text);
+  font-variant-numeric: tabular-nums;
+  line-height: 28px;
 }
 
 .desktop-notes-manager__hint {
@@ -332,7 +270,7 @@
   display: inline-block;
   width: 18px;
   height: 18px;
-  border: 1px solid rgba(0, 0, 0, 0.12);
+  border: 1px solid var(--toolbox-border);
   border-radius: 4px;
 }
 
@@ -346,6 +284,6 @@
 }
 
 /* 贴纸文本可能较长，限制行内删除确认弹层的宽度 */
-.desktop-notes-manager .ant-popconfirm {
+.desktop-notes-manager__delete-popover {
   max-width: 340px;
 }

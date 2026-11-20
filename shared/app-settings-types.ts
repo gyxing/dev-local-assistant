@@ -1,5 +1,13 @@
-/** 控制整个工具箱的启动与退出方式。 */
+export type MainWindowTheme = 'system' | 'light' | 'dark';
+
+/** 校验配置文件与设置请求中的主窗口主题。 */
+export function isMainWindowTheme(value: unknown): value is MainWindowTheme {
+  return value === 'system' || value === 'light' || value === 'dark';
+}
+
+/** 工具箱的外观与运行偏好。 */
 export interface AppSettingsPreferences {
+  mainWindowTheme: MainWindowTheme;
   launchAtLogin: boolean;
   quitWhenMainWindowCloses: boolean;
 }

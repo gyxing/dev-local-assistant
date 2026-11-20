@@ -1,71 +1,22 @@
 .desktop-calendar-manager {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--toolbox-gap);
   height: 100%;
   min-height: 0;
   overflow: auto;
+  scrollbar-width: thin;
 }
 
-.desktop-calendar-manager__header {
-  display: flex;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  min-height: 32px;
+.desktop-calendar-manager > .ant-card {
+  flex: none;
 }
 
-.desktop-calendar-manager__heading {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.desktop-calendar-manager__title-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.desktop-calendar-manager__title {
-  margin-bottom: 0 !important;
-  font-size: 15px !important;
-  line-height: 20px !important;
-}
-
-.desktop-calendar-manager .ant-card-head {
-  min-height: 32px;
-  padding: 0 10px;
-  font-size: 13px;
-}
-
-.desktop-calendar-manager .ant-card-head-title {
-  padding: 6px 0;
-}
-
-.desktop-calendar-manager .ant-card-body {
-  padding: 10px;
-}
-
-/* 运行设置：一行两栏 */
+/* 运行设置在有足够空间时并排显示。 */
 .desktop-calendar-manager__runtime {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
-}
-
-.desktop-calendar-manager__item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  min-height: 56px;
-  padding: 10px 12px;
-  background: var(--cleaner-surface-soft);
-  border: 1px solid var(--cleaner-border-soft);
-  border-radius: 8px;
 }
 
 .desktop-calendar-manager__item-text {
@@ -93,23 +44,30 @@
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 8px 12px;
-  background: var(--cleaner-surface-soft);
-  border: 1px solid var(--cleaner-border-soft);
-  border-radius: 8px;
+  padding-block: 3px;
   font-size: 13px;
 }
 
-.desktop-calendar-manager__slider-row {
+.desktop-calendar-manager__appearance {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-top: 12px;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin-top: 9px;
+}
+
+.desktop-calendar-manager__slider-row {
+  flex: 1 1 290px;
+  max-width: 520px;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .desktop-calendar-manager__slider-label {
   flex: 0 0 auto;
-  color: var(--cleaner-text-muted);
+  color: var(--toolbox-muted);
   font-size: 12px;
 }
 
@@ -120,7 +78,7 @@
 
 .desktop-calendar-manager__slider-value {
   flex: 0 0 40px;
-  color: var(--cleaner-text-muted);
+  color: var(--toolbox-muted);
   font-size: 12px;
   font-variant-numeric: tabular-nums;
   text-align: right;
@@ -130,8 +88,7 @@
 .desktop-calendar-manager__theme-row {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-top: 12px;
+  gap: 8px;
 }
 
 /* 窗口：左侧尺寸与坐标，右侧方向键 */
@@ -153,8 +110,8 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  width: 96px;
-  color: var(--cleaner-text-muted);
+  width: 72px;
+  color: var(--toolbox-muted);
   font-size: 12px;
 }
 
@@ -164,7 +121,7 @@
 
 /* 显示器下拉需要更宽，避免选项文字被截断 */
 .desktop-calendar-manager__window-fields .desktop-calendar-manager__field--display {
-  width: 220px;
+  width: 214px;
 }
 
 .desktop-calendar-manager__field--display .ant-select {
@@ -175,12 +132,12 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  color: var(--cleaner-text-muted);
+  color: var(--toolbox-muted);
   font-size: 12px;
 }
 
 .desktop-calendar-manager__coord-value {
-  color: var(--cleaner-text-strong);
+  color: var(--toolbox-text);
   font-size: 13px;
   font-variant-numeric: tabular-nums;
   line-height: 28px;
@@ -188,22 +145,18 @@
 
 .desktop-calendar-manager__dpad {
   display: grid;
-  grid-template-columns: repeat(3, 28px);
-  grid-auto-rows: 28px;
-  gap: 4px;
+  grid-template-columns: repeat(3, 25px);
+  grid-auto-rows: 23px;
+  gap: 6px;
 }
 
 .desktop-calendar-manager__dpad .ant-btn {
-  width: 28px;
-  height: 28px;
+  width: 25px;
+  height: 23px;
   padding: 0;
 }
 
-@media (max-width: 860px) {
-  .desktop-calendar-manager__runtime {
-    grid-template-columns: 1fr;
-  }
-
+@container toolbox-content (max-width: 690px) {
   .desktop-calendar-manager__switches {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

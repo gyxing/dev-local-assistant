@@ -1,6 +1,6 @@
-@paper-border: rgba(80, 72, 56, 0.14);
-@paper-bg: rgba(255, 252, 244, 0.9);
-@paper-bg-strong: rgba(255, 252, 244, 0.96);
+@paper-border: rgba(101, 79, 46, 0.24);
+@paper-bg: rgba(255, 252, 244, 0.88);
+@paper-bg-strong: rgba(255, 252, 244, 0.98);
 @paper-bg-hover: rgba(255, 249, 231, 0.96);
 @text-primary: #3f3a33;
 @text-secondary: #5c554a;
@@ -18,12 +18,18 @@
   background: transparent;
   color: @text-primary;
   user-select: none;
-  font-family: 'Microsoft YaHei UI', 'Segoe UI', sans-serif;
+  font-family: 'Segoe UI', 'Microsoft YaHei UI', system-ui, sans-serif;
 
   button,
   textarea,
   input {
     font: inherit;
+  }
+
+  button:focus-visible,
+  textarea:focus-visible {
+    outline: 2px solid #886129;
+    outline-offset: 2px;
   }
 
   .note-surface {
@@ -65,13 +71,22 @@
     box-shadow: @shadow-card;
   }
 
+  .surface-action:not(:disabled):hover {
+    background: @paper-bg-hover;
+  }
+
+  .surface-action:disabled {
+    cursor: default;
+    opacity: 0.65;
+  }
+
   .sticky-note {
     position: absolute;
     width: @sticky-note-width;
     min-height: 96px;
     padding: 14px 14px 12px;
     border: 1px solid rgba(92, 78, 48, 0.1);
-    border-radius: 7px;
+    border-radius: 10px;
     color: @text-primary;
     cursor: grab;
     box-shadow: @shadow-card;
@@ -103,27 +118,64 @@
     line-height: 1.55;
   }
 
+  .note-menu-trigger {
+    position: absolute;
+    inset-block-start: 6px;
+    inset-inline-end: 6px;
+    display: grid;
+    width: 24px;
+    height: 24px;
+    place-items: center;
+    padding: 0;
+    border: 1px solid @paper-border;
+    border-radius: 6px;
+    background: @paper-bg-strong;
+    color: @icon-color;
+    cursor: pointer;
+    opacity: 0;
+  }
+
+  .sticky-note:hover .note-menu-trigger,
+  .sticky-note:focus-within .note-menu-trigger,
+  .note-menu-trigger[aria-expanded='true'] {
+    opacity: 1;
+  }
+
   .note-menu {
     position: absolute;
     right: 8px;
-    top: 8px;
+    top: var(--note-menu-top, 32px);
+    z-index: 1;
     display: grid;
-    gap: 4px;
-    width: 96px;
+    gap: 2px;
+    width: 124px;
     padding: 6px;
-    border: 1px solid rgba(70, 64, 52, 0.14);
-    border-radius: 7px;
+    border: 1px solid @paper-border;
+    border-radius: 9px;
     background: @paper-bg-strong;
-    box-shadow: 0 10px 26px rgba(42, 36, 24, 0.16);
+    box-shadow: @shadow-popover;
 
     button {
-      min-height: 26px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 30px;
+      padding: 4px 7px;
       border: 0;
       border-radius: 5px;
       background: transparent;
       color: #4c463d;
       text-align: left;
       cursor: pointer;
+      font-size: 12px;
+
+      &:hover {
+        background: @paper-bg-hover;
+      }
+    }
+
+    .note-menu__danger {
+      color: #a33a36;
     }
   }
 
@@ -136,9 +188,14 @@
     padding: 0 12px;
     border: 1px solid @paper-border;
     border-radius: 9px;
-    background: rgba(255, 252, 244, 0.82);
+    background: @paper-bg-strong;
     color: @text-secondary;
     cursor: pointer;
+  }
+
+  .overflow-tag:hover,
+  .overflow-tag[aria-expanded='true'] {
+    background: @paper-bg-hover;
   }
 
   .overflow-panel {
@@ -148,14 +205,20 @@
     z-index: 1100;
     display: grid;
     gap: 8px;
-    width: 220px;
-    max-height: 260px;
+    width: min(246px, calc(100% - 36px));
+    max-height: min(260px, calc(100% - 76px));
     padding: 10px;
     overflow-y: auto;
     border: 1px solid @paper-border;
-    border-radius: 8px;
-    background: rgba(255, 252, 244, 0.94);
+    border-radius: 12px;
+    background: @paper-bg-strong;
     box-shadow: @shadow-popover;
+  }
+
+  .overflow-panel__title {
+    padding: 2px 3px;
+    color: @text-secondary;
+    font-size: 12px;
   }
 
   .overflow-item {
@@ -163,7 +226,11 @@
     padding: 9px 10px;
     border: 1px solid rgba(90, 78, 52, 0.1);
     border-radius: 6px;
-    background: rgba(255, 255, 255, 0.46);
+    background: @paper-bg;
+
+    &:hover {
+      background: @paper-bg-hover;
+    }
     color: #484238;
     cursor: pointer;
     text-align: left;
@@ -183,10 +250,12 @@
     right: 18px;
     top: 18px;
     z-index: 1300;
-    width: 280px;
+    width: min(288px, calc(100% - 36px));
+    max-height: calc(100% - 36px);
     padding: 12px;
+    overflow: auto;
     border: 1px solid @paper-border;
-    border-radius: 8px;
+    border-radius: 12px;
     background: @paper-bg-strong;
     color: #4c463d;
     box-shadow: @shadow-popover;
@@ -203,13 +272,16 @@
   }
 
   .settings-header {
-    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid @paper-border;
+    font-size: 14px;
   }
 
   .settings-row,
   .settings-slider,
   .settings-check {
-    margin-top: 10px;
+    margin-top: 9px;
+    font-size: 12px;
   }
 
   .settings-number {

@@ -1,0 +1,193 @@
+html[data-toolbox-theme] {
+  --toolbox-gap: 10px;
+  --toolbox-mono: 'Cascadia Mono', Consolas, 'Microsoft YaHei UI', monospace;
+  --toolbox-modal-top: clamp(16px, 8vh, 64px);
+
+  color-scheme: light;
+  background: var(--toolbox-canvas);
+  color: var(--toolbox-text);
+  font-family: 'Segoe UI', 'Microsoft YaHei UI', system-ui, sans-serif;
+
+  body {
+    margin: 0;
+  }
+
+  button:focus-visible,
+  a[href]:focus-visible,
+  [tabindex]:not([tabindex='-1']):focus-visible {
+    outline: 2px solid var(--toolbox-accent);
+    outline-offset: 2px;
+  }
+
+  .ant-modal:not(.ant-modal-confirm) {
+    top: var(--toolbox-modal-top);
+  }
+
+  .ant-modal:not(.ant-modal-confirm) .ant-modal-content {
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100dvh - var(--toolbox-modal-top) - 24px);
+  }
+
+  .ant-modal-header,
+  .ant-modal-footer {
+    flex: none;
+  }
+
+  .ant-modal:not(.ant-modal-confirm) .ant-modal-body {
+    min-height: 0;
+    overflow: auto;
+    overflow-wrap: anywhere;
+  }
+
+  .ant-modal-confirm {
+    top: var(--toolbox-modal-top);
+  }
+
+  .ant-modal-confirm-paragraph {
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .ant-modal-confirm-content {
+    max-height: calc(100dvh - var(--toolbox-modal-top) - 166px);
+    overflow: auto;
+    overflow-wrap: anywhere;
+  }
+
+  .ant-empty-description {
+    color: var(--toolbox-muted);
+  }
+
+  .ant-table-placeholder .ant-table-cell {
+    color: var(--toolbox-muted);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    // 按钮等组件仍保留加载图标，只停止旋转。
+    .anticon-spin {
+      animation: none;
+    }
+  }
+}
+
+html[data-toolbox-theme='dark'] {
+  color-scheme: dark;
+}
+
+.toolbox-page-header {
+  display: flex;
+  flex: none;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  padding-bottom: 2px;
+}
+
+.toolbox-page-header__copy {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.toolbox-page-header__heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.toolbox-page-header__title {
+  margin: 0;
+  color: var(--toolbox-text);
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.toolbox-page-header__heading .ant-tag {
+  margin-inline-end: 0;
+}
+
+.toolbox-page-header__description {
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.toolbox-page-header__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.toolbox-toolbar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+
+.toolbox-data-table {
+  min-width: 0;
+  overflow: hidden;
+  font-variant-numeric: tabular-nums;
+}
+
+.toolbox-fill-table,
+.toolbox-fill-table .ant-spin-nested-loading,
+.toolbox-fill-table .ant-spin-container,
+.toolbox-fill-table .ant-table,
+.toolbox-fill-table .ant-table-container {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.toolbox-fill-table .ant-table-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  scrollbar-width: thin;
+}
+
+.toolbox-fill-table .ant-table-header {
+  flex: none;
+}
+
+.toolbox-mono {
+  font-family: var(--toolbox-mono);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.toolbox-position-panel {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  padding: 7px 9px;
+  border: 1px solid var(--toolbox-divider);
+  border-radius: var(--toolbox-radius-control);
+  background: var(--toolbox-position-fill);
+  color: var(--toolbox-muted);
+  font-size: 12px;
+}
+
+.toolbox-position-panel--preset {
+  border-color: var(--toolbox-preset-border);
+  background: var(--toolbox-preset-fill);
+}
+
+.toolbox-setting-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  min-height: 34px;
+  padding: 4px 0;
+}
