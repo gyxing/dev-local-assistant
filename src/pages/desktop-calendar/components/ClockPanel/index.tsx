@@ -30,17 +30,22 @@ export default function ClockPanel({ now, detail, showFestivals, showSolarTerms 
   return (
     <aside className="desktop-calendar__clock">
       <time className="desktop-calendar__time" dateTime={time}>
-        {mainTime}
+        <span className="desktop-calendar__hours">{mainTime}</span>
         <span className="desktop-calendar__seconds">{seconds}</span>
       </time>
       <div className="desktop-calendar__accent" aria-hidden="true" />
       <div className="desktop-calendar__clock-details">
         <div className="desktop-calendar__gregorian">
           <span className="desktop-calendar__weekday">星期{getWeekdayText(now)}</span>
-          <time className="desktop-calendar__date" dateTime={date}>{date}</time>
+          <time className="desktop-calendar__date" dateTime={date}>
+            {now.getMonth() + 1} <span className="desktop-calendar__date-unit">月</span>{' '}
+            {now.getDate()} <span className="desktop-calendar__date-unit">日</span>
+          </time>
         </div>
         <div className="desktop-calendar__lunar-details">
-          <span className="desktop-calendar__lunar">农历 {detail.lunarText}</span>
+          <span className="desktop-calendar__lunar">
+            <span className="desktop-calendar__lunar-prefix">农历</span> {detail.lunarText}
+          </span>
           <span className="desktop-calendar__ganzhi">{detail.ganzhiYear}年 · {detail.shengxiao}</span>
         </div>
 

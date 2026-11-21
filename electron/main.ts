@@ -1,7 +1,7 @@
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { app, BrowserWindow, dialog, ipcMain, type IpcMainInvokeEvent } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, nativeTheme, type IpcMainInvokeEvent } from 'electron';
 import { AppSettingsController, BACKGROUND_LAUNCH_ARG } from './app-settings-controller';
 import { DesktopNotesController, getAppIconPath } from './desktop-notes-controller';
 import { DesktopCalendarController } from './desktop-calendar-controller';
@@ -19,6 +19,8 @@ import { PortService } from './services/port-service';
 import { DesktopNotesService } from './services/desktop-notes-service';
 import { ScanService } from './services/scan-service';
 import { calculateDirectorySize } from './services/size-service';
+import { getMainWindowMenu, runMainWindowMenuCommand } from './main-window-menu';
+import { MAIN_WINDOW_COLORS, MAIN_WINDOW_TITLE_BAR_HEIGHT, resolveMainWindowScheme } from '../shared/main-window-appearance';
 import type { PackageManagerName, PortUsageQuery } from '../shared/developer-tools-types';
 import type { HostsSaveRequest } from '../shared/network-tools-types';
 import type {
@@ -61,7 +63,24 @@ function getHostsHelperPath() {
     : path.join(app.getAppPath(), 'electron', 'resources', 'hosts-helper.ps1');
 }
 
+function getMainWindowColors() {
+  return MAIN_WINDOW_COLORS[resolveMainWindowScheme(appSettingsController.mainWindowTheme, nativeTheme.shouldUseDarkColors)];
+}
+
+function mainWindowOverlay(colors: (typeof MAIN_WINDOW_COLORS)[keyof typeof MAIN_WINDOW_COLORS]) {
+  return { color: colors.titleBar, symbolColor: colors.symbol, height: MAIN_WINDOW_TITLE_BAR_HEIGHT };
+}
+
+/** 主窗口单独更新原生按钮颜色，托盘继续跟随系统主题。 */
+function updateMainWindowAppearance() {
+  if (process.platform !== 'win32' || !mainWindow || mainWindow.isDestroyed()) return;
+  const colors = getMainWindowColors();
+  mainWindow.setBackgroundColor(colors.canvas);
+  mainWindow.setTitleBarOverlay(mainWindowOverlay(colors));
+}
+
 function createWindow() {
+  const colors = getMainWindowColors();
   mainWindow = new BrowserWindow({
     width: 1180,
     height: 760,
@@ -69,6 +88,12 @@ function createWindow() {
     minHeight: 640,
     title: '本地助手',
     icon: getAppIconPath(),
+    backgroundColor: colors.canvas,
+    ...(process.platform === 'win32' ? {
+      frame: false,
+      titleBarStyle: 'hidden',
+      titleBarOverlay: mainWindowOverlay(colors),
+    } as const : {}),
     webPreferences: {
       preload: getPreloadPath(),
       contextIsolation: true,
@@ -81,6 +106,11 @@ function createWindow() {
   desktopNotesController.attachMainWindow(mainWindow);
   desktopCalendarController.attachMainWindow(mainWindow);
   const window = mainWindow;
+  if (process.platform === 'win32') {
+    // 无边框窗口保留原有菜单快捷键，菜单内容由渲染层展示。
+    nativeTheme.on('updated', updateMainWindowAppearance);
+    window.once('closed', () => nativeTheme.off('updated', updateMainWindowAppearance));
+  }
   window.on('close', (event) => {
     if (quitting) return;
     event.preventDefault();
@@ -170,7 +200,7 @@ function registerConfigHandlers() {
 }
 
 /** 应用设置只能从主窗口主框架读取和修改。 */
-function assertAppSettingsSender(event: IpcMainInvokeEvent) {
+function assertMainWindowSender(event: IpcMainInvokeEvent): BrowserWindow {
   if (!mainWindow || mainWindow.isDestroyed()
     || event.sender !== mainWindow.webContents
     || event.senderFrame !== mainWindow.webContents.mainFrame) {
@@ -186,17 +216,32 @@ function assertAppSettingsSender(event: IpcMainInvokeEvent) {
   if (actual.href !== expected.href) {
     throw new Error('请在本地助手主窗口中操作系统设置');
   }
+  return mainWindow;
 }
 
 function registerAppSettingsHandlers() {
   ipcMain.handle(IPC_CHANNELS.appSettingsGetSnapshot, (event) => {
-    assertAppSettingsSender(event);
+    assertMainWindowSender(event);
     return appSettingsController.getSnapshot();
   });
   ipcMain.handle(IPC_CHANNELS.appSettingsSave, (event, patch: unknown) => {
-    assertAppSettingsSender(event);
-    return writeAppConfig(() => appSettingsController.save(patch));
+    assertMainWindowSender(event);
+    return writeAppConfig(async () => {
+      const previousTheme = appSettingsController.mainWindowTheme;
+      const settings = await appSettingsController.save(patch);
+      if (settings.mainWindowTheme !== previousTheme) updateMainWindowAppearance();
+      return settings;
+    });
   });
+  if (process.platform === 'win32') {
+    ipcMain.handle(IPC_CHANNELS.mainWindowMenu, (event) => {
+      assertMainWindowSender(event);
+      return getMainWindowMenu();
+    });
+    ipcMain.handle(IPC_CHANNELS.mainWindowMenuCommand, (event, id: unknown) => {
+      runMainWindowMenuCommand(assertMainWindowSender(event), id);
+    });
+  }
 }
 
 function sendTaskEvent(event: TaskEvent) {

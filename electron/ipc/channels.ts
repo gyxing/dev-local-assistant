@@ -54,5 +54,7 @@ export const IPC_CHANNELS = {
   trayPanelStateChanged: 'tray-panel:state-changed',
   appSettingsGetSnapshot: 'app-settings:get-snapshot',
   appSettingsSave: 'app-settings:save',
+  mainWindowMenu: 'main-window:menu',
+  mainWindowMenuCommand: 'main-window:menu-command',
   taskEvent: 'task:event',
 } as const;

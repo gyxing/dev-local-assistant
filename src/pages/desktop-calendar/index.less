@@ -1,216 +1,290 @@
 .desktop-calendar {
-  /* 浅色主题：暖白底 + 深色文字 */
-  --cal-bg: rgba(250, 248, 243, var(--calendar-opacity, 0.94));
-  --cal-text-strong: #1a1510;
-  --cal-text: #241f19;
-  --cal-text-weekday: #3f3930;
-  --cal-text-muted: #6b6254;
-  --cal-text-sub: #6f6658;
-  --cal-divider: rgba(90, 80, 60, 0.16);
-  --cal-weekend: #c05a28;
-  --cal-festival: #a84616;
-  --cal-badge-bg: rgba(196, 112, 60, 0.16);
-  --cal-badge-text: #a84616;
-  --cal-term-bg: rgba(47, 111, 181, 0.14);
-  --cal-term-text: #2a5f9e;
-  --cal-today-bg: rgba(214, 145, 20, 0.22);
-  --cal-today-border: rgba(178, 120, 24, 0.5);
-  --cal-today-text: #8a5a12;
-  --cal-off-bg: rgba(192, 57, 43, 0.16);
-  --cal-off-text: #a3352a;
-  --cal-work-bg: rgba(47, 111, 181, 0.16);
-  --cal-work-text: #2a5f9e;
+  // 透明度只应用于窗口底色，时钟区和月历共享这一层背景。
+  --cal-opacity: var(--calendar-opacity, 0.92);
+  --cal-surface: 250 247 239;
+  --cal-text: #28251f;
+  --cal-muted: #564f42;
+  --cal-outside: #70685b;
+  --cal-weekend: #a62d32;
+  --cal-gold: #875517;
+  --cal-event: #79532d;
+  --cal-rule: #55412b30;
+  --cal-rim: #fdf7eaa8;
+  --cal-today-bg: #f4dfb5;
+  --cal-today-edge: #ad7a31;
+  --cal-today-ink: #69420e;
+  --cal-rest-bg: #f3d8d8;
+  --cal-rest-ink: #7d3036;
+  --cal-work-bg: #dce8f5;
+  --cal-work-ink: #264d76;
 
-  display: flex;
-  gap: 14px;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: 158px minmax(0, 1fr);
+  gap: 17px;
   width: 100vw;
   height: 100vh;
-  box-sizing: border-box;
-  padding: 16px 18px;
-  border-radius: 14px;
-  /* 不透明度只作用于背景，文字保持不透明 */
-  background: var(--cal-bg);
+  padding: 22px 20px;
+  overflow: hidden;
+  background: rgb(var(--cal-surface) / var(--cal-opacity));
+  border: 1px solid var(--cal-rim);
+  border-radius: 16px;
   color: var(--cal-text);
-  font-family: 'Microsoft YaHei UI', 'Segoe UI', sans-serif;
+  font-family: 'Segoe UI', 'Microsoft YaHei UI', system-ui, sans-serif;
   user-select: none;
 }
 
-/* 深色主题：深灰底 + 浅色文字，适配深色壁纸 */
 .desktop-calendar.is-dark {
-  --cal-bg: rgba(24, 26, 32, var(--calendar-opacity, 0.94));
-  --cal-text-strong: #ffffff;
-  --cal-text: #eceff4;
-  --cal-text-weekday: #c9d0dc;
-  --cal-text-muted: #9aa5b5;
-  --cal-text-sub: #9aa5b5;
-  --cal-divider: rgba(255, 255, 255, 0.12);
-  --cal-weekend: #f0b98d;
-  --cal-festival: #f2c66d;
-  --cal-badge-bg: rgba(214, 145, 20, 0.24);
-  --cal-badge-text: #f2c66d;
-  --cal-term-bg: rgba(120, 160, 240, 0.2);
-  --cal-term-text: #9db8ff;
-  --cal-today-bg: rgba(214, 145, 20, 0.28);
-  --cal-today-border: rgba(214, 145, 20, 0.55);
-  --cal-today-text: #ffe2a8;
-  --cal-off-bg: rgba(230, 90, 70, 0.28);
-  --cal-off-text: #ff9d8a;
-  --cal-work-bg: rgba(90, 140, 230, 0.28);
-  --cal-work-text: #9db8ff;
+  --cal-surface: 25 28 31;
+  --cal-text: #f4f2ec;
+  --cal-muted: #c6c6c0;
+  --cal-outside: #a2aaa7;
+  --cal-weekend: #edbd9d;
+  --cal-gold: #f1c77e;
+  --cal-event: #e7c694;
+  --cal-rule: #e2e5df29;
+  --cal-rim: #f5f1e54c;
+  --cal-today-bg: #4a3925;
+  --cal-today-edge: #b48743;
+  --cal-today-ink: #ffe3ad;
+  --cal-rest-bg: #683b40;
+  --cal-rest-ink: #ffe4e4;
+  --cal-work-bg: #304961;
+  --cal-work-ink: #dfedfe;
 }
 
 .desktop-calendar__clock {
   display: flex;
-  flex: 0 0 196px;
   flex-direction: column;
   justify-content: center;
-  gap: 6px;
-  padding-right: 18px;
-  border-right: 1px solid var(--cal-divider);
+  min-width: 0;
+  padding-inline-end: 13px;
+  border-inline-end: 1px solid var(--cal-rule);
 }
 
 .desktop-calendar__time {
   display: flex;
   align-items: baseline;
-  color: var(--cal-text-strong);
-  font-size: 42px;
-  font-weight: 700;
+  gap: 5px;
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.5px;
   line-height: 1;
   white-space: nowrap;
 }
 
+.desktop-calendar__hours {
+  font-size: 50px;
+  font-weight: 700;
+  letter-spacing: -0.07em;
+}
+
 .desktop-calendar__seconds {
-  margin-left: 2px;
-  color: var(--cal-text-sub);
-  font-size: 22px;
-  font-weight: 600;
-  letter-spacing: 0;
+  color: var(--cal-muted);
+  font-size: 17px;
+  font-weight: 550;
+  letter-spacing: 0.005em;
 }
 
 .desktop-calendar__accent {
-  width: 46px;
-  height: 3px;
-  margin: 10px 0 8px;
-  border-radius: 999px;
-  background: linear-gradient(90deg, #d68a1e, rgba(214, 138, 30, 0.15));
+  width: 38px;
+  height: 2px;
+  margin: 16px 0 14px;
+  border-radius: 2px;
+  background: var(--cal-gold);
+}
+
+.desktop-calendar__clock-details {
+  display: grid;
+  gap: 13px;
+  min-width: 0;
+}
+
+.desktop-calendar__gregorian,
+.desktop-calendar__lunar-details {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  line-height: 1.35;
+}
+
+.desktop-calendar__gregorian {
+  gap: 6px;
 }
 
 .desktop-calendar__weekday {
-  align-self: flex-start;
-  padding: 2px 10px;
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 1px 8px;
+  border: 1px solid color-mix(in srgb, var(--cal-gold) 38%, transparent);
   border-radius: 999px;
-  background: var(--cal-badge-bg);
-  color: var(--cal-text-weekday);
-  font-size: 15px;
-  font-weight: 600;
-  line-height: 1.5;
+  color: var(--cal-gold);
+  font-size: 13px;
+  font-weight: 650;
+  letter-spacing: 0.07em;
 }
 
 .desktop-calendar__date {
-  color: var(--cal-text-muted);
-  font-size: 16px;
+  font-size: 24px;
+  font-weight: 680;
+  letter-spacing: -0.035em;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.desktop-calendar__date-unit {
+  color: var(--cal-muted);
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.desktop-calendar__lunar-details {
+  padding-block-start: 9px;
+  border-block-start: 1px solid var(--cal-rule);
 }
 
 .desktop-calendar__lunar {
-  margin-top: 4px;
-  color: var(--cal-text-weekday);
-  font-size: 15px;
+  font-size: 16px;
+  font-weight: 550;
+  white-space: nowrap;
 }
 
+.desktop-calendar__lunar-prefix,
 .desktop-calendar__ganzhi {
-  color: var(--cal-text-muted);
-  font-size: 12px;
+  color: var(--cal-muted);
+  font-size: 13px;
+}
+
+.desktop-calendar__lunar-prefix {
+  font-weight: 500;
 }
 
 .desktop-calendar__badges {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 10px;
+  gap: 4px;
 }
 
 .desktop-calendar__badge {
-  padding: 3px 10px;
-  border-radius: 999px;
-  background: var(--cal-badge-bg);
-  color: var(--cal-badge-text);
-  font-size: 12px;
-  line-height: 1.4;
+  padding: 2px 6px;
+  border-radius: 5px;
+  background: var(--cal-today-bg);
+  color: var(--cal-today-ink);
+  font-size: 11px;
+  line-height: 1.2;
 }
 
 .desktop-calendar__badge--term {
-  background: var(--cal-term-bg);
-  color: var(--cal-term-text);
+  background: var(--cal-work-bg);
+  color: var(--cal-work-ink);
 }
 
 .desktop-calendar__month {
   display: flex;
-  flex: 1;
   flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.desktop-calendar__month-title,
+.desktop-calendar__month-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
   min-width: 0;
 }
 
 .desktop-calendar__month-title {
-  display: flex;
-  align-items: baseline;
   justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 8px;
+  margin-bottom: 9px;
 }
 
 .desktop-calendar__month-label {
-  color: var(--cal-text-strong);
-  font-size: 17px;
-  font-weight: 600;
+  flex: none;
+  font-size: 20px;
+  font-weight: 680;
+  letter-spacing: -0.025em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .desktop-calendar__month-festival {
-  color: var(--cal-festival);
-  font-size: 13px;
+  overflow: hidden;
+  color: var(--cal-event);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.desktop-calendar__today-key {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 5px;
+  color: var(--cal-muted);
+  font-size: 12px;
+  white-space: nowrap;
+
+  &::before {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--cal-gold);
+    content: '';
+  }
 }
 
 .desktop-calendar__grid {
   display: grid;
   flex: 1;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 2px;
   min-height: 0;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-rows: 25px;
+  grid-auto-rows: minmax(0, 1fr);
+  gap: 3px 2px;
 }
 
 .desktop-calendar__weekday-cell {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: grid;
+  place-items: center;
   padding-bottom: 4px;
-  color: var(--cal-text-sub);
-  font-size: 13px;
+  border-bottom: 1px solid var(--cal-rule);
+  color: var(--cal-muted);
+  font-size: 12px;
+}
+
+.desktop-calendar__weekday-cell.is-weekend {
+  color: var(--cal-weekend);
+}
+
+.desktop-calendar:not(.is-dark) .desktop-calendar__weekday-cell.is-weekend {
+  font-weight: 650;
 }
 
 .desktop-calendar__day {
   position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 2px;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 3px;
+  min-width: 0;
   min-height: 0;
   border-radius: 7px;
 }
 
 .desktop-calendar__day-number {
-  color: var(--cal-text);
   font-size: 17px;
+  font-weight: 620;
   font-variant-numeric: tabular-nums;
-  line-height: 1.1;
+  line-height: 1.05;
 }
 
 .desktop-calendar__day-sub {
+  max-width: 100%;
+  padding-inline: 1px;
   overflow: hidden;
-  width: 100%;
-  color: var(--cal-text-sub);
+  color: var(--cal-muted);
   font-size: 11px;
   line-height: 1.15;
   text-align: center;
@@ -222,73 +296,82 @@
   color: var(--cal-weekend);
 }
 
+.desktop-calendar__day-sub.is-event {
+  color: var(--cal-event);
+}
+
 .desktop-calendar__day.is-outside {
-  opacity: 0.32;
+  .desktop-calendar__day-number,
+  .desktop-calendar__day-sub {
+    color: var(--cal-outside);
+    font-weight: 400;
+  }
 }
 
 .desktop-calendar__day.is-today {
   background: var(--cal-today-bg);
-  box-shadow: inset 0 0 0 1px var(--cal-today-border);
-}
+  box-shadow: inset 0 0 0 1px var(--cal-today-edge);
 
-.desktop-calendar__day.is-today .desktop-calendar__day-number {
-  color: var(--cal-today-text);
-  font-weight: 700;
+  .desktop-calendar__day-number,
+  .desktop-calendar__day-sub {
+    color: var(--cal-today-ink);
+  }
 }
 
 .desktop-calendar__mark {
+  // 角标独立于日期排版，显示休班时数字仍居中。
   position: absolute;
-  top: 0;
-  right: 1px;
-  padding-inline: 1px;
-  border-radius: 4px;
+  inset-block-start: 2px;
+  inset-inline-end: 1px;
+  padding: 1px 2px;
+  border-radius: 3px;
   font-size: 9px;
-  line-height: 1.05;
+  font-weight: 650;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .desktop-calendar__mark.is-off {
-  background: var(--cal-off-bg);
-  color: var(--cal-off-text);
+  background: var(--cal-rest-bg);
+  color: var(--cal-rest-ink);
 }
 
 .desktop-calendar__mark.is-work {
   background: var(--cal-work-bg);
-  color: var(--cal-work-text);
+  color: var(--cal-work-ink);
 }
 
-// 默认尺寸沿用历史版的样式，窄窗的排布单独调整。
-.desktop-calendar__clock-details,
-.desktop-calendar__gregorian,
-.desktop-calendar__lunar-details,
-.desktop-calendar__day-heading {
-  display: contents;
+// 接近换列临界点时，缩小角标以避开两位数日期。
+@media (min-width: 501px) and (max-width: 559px) {
+  .desktop-calendar {
+    grid-template-columns: 150px minmax(0, 1fr);
+    gap: 14px;
+    padding-inline: 16px;
+  }
+
+  .desktop-calendar__mark {
+    inset-block-start: 1px;
+    padding-inline: 1px;
+    font-size: 8px;
+  }
 }
 
 @media (max-width: 500px) {
   .desktop-calendar {
-    flex-direction: column;
-    gap: 7px;
-    padding: 8px 10px;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 10px;
+    padding: 13px 14px;
   }
 
   .desktop-calendar__clock {
     display: grid;
-    flex: none;
     grid-template-columns: max-content minmax(0, 1fr);
     align-items: center;
-    gap: 10px;
-    min-width: 0;
-    padding: 0 0 6px;
-    border-right: 0;
-    border-bottom: 1px solid var(--cal-divider);
-  }
-
-  .desktop-calendar__time {
-    font-size: clamp(30px, 7.4vw, 38px);
-  }
-
-  .desktop-calendar__seconds {
-    font-size: 14px;
+    gap: 14px;
+    padding: 0 0 8px;
+    border-inline-end: 0;
+    border-block-end: 1px solid var(--cal-rule);
   }
 
   .desktop-calendar__accent {
@@ -296,101 +379,83 @@
   }
 
   .desktop-calendar__clock-details {
-    display: grid;
-    gap: 3px;
-    min-width: 0;
+    gap: 4px;
   }
 
   .desktop-calendar__gregorian,
   .desktop-calendar__lunar-details {
-    display: flex;
+    flex-direction: row;
     align-items: baseline;
     flex-wrap: wrap;
     gap: 2px 7px;
   }
 
+  .desktop-calendar__hours {
+    font-size: 39px;
+  }
+
+  .desktop-calendar__seconds {
+    font-size: 14px;
+  }
+
+  .desktop-calendar__date {
+    font-size: 15px;
+  }
+
+  .desktop-calendar__date-unit {
+    font-size: inherit;
+  }
+
   .desktop-calendar__weekday {
-    padding: 1px 6px;
-    font-size: 11px;
-    line-height: 1.4;
-  }
-
-  .desktop-calendar__date,
-  .desktop-calendar__lunar {
-    margin-top: 0;
-    font-size: 12px;
-  }
-
-  .desktop-calendar__ganzhi,
-  .desktop-calendar__badge {
-    font-size: 10px;
-  }
-
-  .desktop-calendar__badges {
-    gap: 4px;
-    margin-top: 0;
-  }
-
-  .desktop-calendar__badge {
-    padding: 1px 6px;
-  }
-
-  .desktop-calendar__month {
     min-height: 0;
+    padding: 0;
+    border: 0;
+    letter-spacing: 0;
+  }
+
+  .desktop-calendar__lunar-details {
+    padding: 0;
+    border: 0;
+  }
+
+  .desktop-calendar__lunar {
+    font-size: 13px;
+  }
+
+  .desktop-calendar__ganzhi {
+    font-size: 11px;
   }
 
   .desktop-calendar__month-title {
-    gap: 5px;
     margin-bottom: 4px;
   }
 
   .desktop-calendar__month-label {
     font-size: 16px;
-    white-space: nowrap;
-  }
-
-  .desktop-calendar__month-festival {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
 
   .desktop-calendar__grid {
-    grid-template-rows: 18px;
-    grid-auto-rows: minmax(0, 1fr);
-  }
-
-  .desktop-calendar__day-heading {
-    // 窄窗给休班标记留出独立的一列，避免和日期数字重叠。
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) max-content minmax(0, 1fr);
-    align-items: center;
-    width: 100%;
-  }
-
-  .desktop-calendar__day-number {
-    grid-column: 2;
-  }
-
-  .desktop-calendar__mark {
-    position: static;
-    grid-column: 3;
-    justify-self: end;
-  }
-}
-
-@media (max-height: 325px) {
-  .desktop-calendar__month-title {
-    margin-bottom: 3px;
-  }
-
-  .desktop-calendar__weekday-cell {
-    padding-bottom: 0;
-    font-size: 12px;
+    grid-template-rows: 20px;
+    row-gap: 2px;
   }
 
   .desktop-calendar__day {
-    gap: 0;
+    gap: 2px;
+  }
+
+  .desktop-calendar__day-number {
+    font-size: 15px;
+  }
+}
+
+@media (max-width: 380px), (max-height: 325px) {
+  .desktop-calendar__grid {
+    grid-template-rows: 17px;
+    row-gap: 1px;
+  }
+
+  .desktop-calendar__day {
+    gap: 1px;
   }
 
   .desktop-calendar__day-number {
@@ -400,11 +465,31 @@
   .desktop-calendar__day-sub {
     font-size: 10px;
   }
+
+  .desktop-calendar__weekday-cell {
+    padding-bottom: 2px;
+    font-size: 11px;
+  }
+
+  .desktop-calendar__mark {
+    inset-block-start: 0;
+    padding: 1px;
+    font-size: 8px;
+  }
 }
 
-@media (max-width: 500px) and (max-height: 325px) {
-  .desktop-calendar__grid {
-    grid-template-rows: 15px;
-    row-gap: 1px;
+@media (max-width: 380px), (max-width: 500px) and (max-height: 325px) {
+  .desktop-calendar {
+    gap: 6px;
+    padding: 10px;
+  }
+
+  .desktop-calendar__clock {
+    gap: 11px;
+    padding-bottom: 6px;
+  }
+
+  .desktop-calendar__hours {
+    font-size: clamp(29px, 9.8vw, 36px);
   }
 }

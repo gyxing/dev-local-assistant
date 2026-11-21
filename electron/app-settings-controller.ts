@@ -37,6 +37,10 @@ export class AppSettingsController {
     return this.preferences.quitWhenMainWindowCloses;
   }
 
+  get mainWindowTheme(): AppSettingsPreferences['mainWindowTheme'] {
+    return this.preferences.mainWindowTheme;
+  }
+
   /** 区分已保存的偏好与系统实际的登录项状态。 */
   getSnapshot(): AppSettingsSnapshot {
     let loginItemEnabled: boolean | undefined;

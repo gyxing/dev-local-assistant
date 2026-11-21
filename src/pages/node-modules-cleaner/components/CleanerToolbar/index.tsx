@@ -44,49 +44,53 @@ export default function CleanerToolbar({
   return (
     <Card size="small">
       <section className="toolbox-toolbar cleaner-toolbar" aria-label="扫描目录与操作">
-        <Text strong className="cleaner-toolbar__label">扫描目录</Text>
-        <Text className="cleaner-toolbar__path toolbox-mono" title={rootPath || undefined}>
-          <FolderOpenOutlined aria-hidden="true" /> {rootPath || '请选择要扫描的目录'}
-        </Text>
-        <Button icon={<FolderOpenOutlined />} onClick={onSelectDirectory} disabled={disabled}>
-          选择目录
-        </Button>
-        <Select
-          className="cleaner-toolbar__history"
-          value={undefined}
-          aria-label="历史目录"
-          placeholder="历史目录"
-          disabled={disabled || !directoryHistory.length}
-          options={directoryHistory.map((item) => ({
-            value: item.path,
-            label: `${item.name} · ${item.path}`,
-          }))}
-          onChange={onSelectHistory}
-        />
-        <Tooltip title="清空历史目录">
-          <Button
-            icon={<ClearOutlined />}
-            aria-label="清空历史目录"
+        <div className="cleaner-toolbar__main">
+          <Text strong className="cleaner-toolbar__label">扫描目录</Text>
+          <Text className="cleaner-toolbar__path toolbox-mono" title={rootPath || undefined}>
+            <FolderOpenOutlined aria-hidden="true" /> {rootPath || '请选择要扫描的目录'}
+          </Text>
+          <Button icon={<FolderOpenOutlined />} onClick={onSelectDirectory} disabled={disabled}>
+            选择目录
+          </Button>
+          <Button type="primary" loading={scanStatus === 'scanning'} onClick={onStartScan} disabled={disabled || !rootPath}>
+            {scanStatus === 'scanning' ? '扫描中…' : '扫描'}
+          </Button>
+          {scanStatus === 'scanning' ? (
+            <Button icon={<PauseOutlined />} onClick={onPauseScan} disabled={disabled}>
+              暂停扫描
+            </Button>
+          ) : null}
+          {scanStatus === 'scan-paused' ? (
+            <Button icon={<PlayCircleOutlined />} onClick={onResumeScan} disabled={disabled}>
+              继续扫描
+            </Button>
+          ) : null}
+        </div>
+        <div className="cleaner-toolbar__secondary">
+          <Select
+            className="cleaner-toolbar__history"
+            value={undefined}
+            aria-label="历史目录"
+            placeholder="历史目录"
             disabled={disabled || !directoryHistory.length}
-            onClick={onClearHistory}
+            options={directoryHistory.map((item) => ({
+              value: item.path,
+              label: `${item.name} · ${item.path}`,
+            }))}
+            onChange={onSelectHistory}
           />
-        </Tooltip>
-        <Button type="primary" loading={scanStatus === 'scanning'} onClick={onStartScan} disabled={disabled || !rootPath}>
-          {scanStatus === 'scanning' ? '扫描中…' : '扫描'}
-        </Button>
-        {scanStatus === 'scanning' ? (
-          <Button icon={<PauseOutlined />} onClick={onPauseScan} disabled={disabled}>
-            暂停扫描
+          <Tooltip title="清空历史目录">
+            <Button
+              icon={<ClearOutlined />}
+              aria-label="清空历史目录"
+              disabled={disabled || !directoryHistory.length}
+              onClick={onClearHistory}
+            />
+          </Tooltip>
+          <Button icon={<ReloadOutlined />} onClick={onRestartScan} disabled={disabled || !rootPath}>
+            重新扫描
           </Button>
-        ) : null}
-        {scanStatus === 'scan-paused' ? (
-          <Button icon={<PlayCircleOutlined />} onClick={onResumeScan} disabled={disabled}>
-            继续扫描
-          </Button>
-        ) : null}
-        <Button icon={<ReloadOutlined />} onClick={onRestartScan} disabled={disabled || !rootPath}>
-          重新扫描
-        </Button>
+        </div>
       </section>
     </Card>
   );

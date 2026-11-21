@@ -39,7 +39,7 @@ export default function ResultsTable({
     {
       title: '项目名',
       dataIndex: 'projectName',
-      width: 136,
+      width: 144,
       ellipsis: { showTitle: false },
       render: (name: string, item) => (
         <button
@@ -57,27 +57,21 @@ export default function ResultsTable({
       ),
     },
     {
-      title: '依赖路径',
-      dataIndex: 'nodeModulesPath',
-      className: 'toolbox-mono',
-      ellipsis: true,
-    },
-    {
       title: '大小',
       align: 'right',
-      width: 84,
+      width: 92,
       render: (_, item) => formatBytes(item.sizeBytes),
       sorter: (left, right) => (left.sizeBytes ?? 0) - (right.sizeBytes ?? 0),
     },
     {
       title: '文件数',
       align: 'right',
-      width: 72,
+      width: 76,
       render: (_, item) => item.fileCount ?? '-',
     },
     {
       title: '类型',
-      width: 100,
+      width: 116,
       render: (_, item) =>
         item.source === 'package-json' ? (
           <Tag color="green">已识别项目</Tag>
@@ -87,7 +81,7 @@ export default function ResultsTable({
     },
     {
       title: '状态',
-      width: 94,
+      width: 112,
       render: (_, item) =>
         isItemProtected(item, protectedProjects) ? (
           <Tag color="cyan">已保护</Tag>
@@ -95,11 +89,17 @@ export default function ResultsTable({
           <Tag color={getItemStatusColor(item.status)}>{statusTextMap[item.status]}</Tag>
         ),
     },
+    // 窄窗优先完整显示项目类型和状态，长路径可以在表格内横向查看。
+    {
+      title: '依赖路径',
+      dataIndex: 'nodeModulesPath',
+      className: 'toolbox-mono',
+      ellipsis: true,
+    },
     {
       title: '操作',
       align: 'right',
-      fixed: 'right',
-      width: 104,
+      width: 120,
       render: (_, item) => {
         const protectedItem = isItemProtected(item, protectedProjects);
         const ignoringDisabled = protectedItem || item.status === 'deleting' || item.status === 'deleted';
@@ -145,7 +145,7 @@ export default function ResultsTable({
         showSizeChanger: true,
         showTotal: (total) => `共 ${total} 个项目`,
       }}
-      scroll={{ x: 825, y: '100%' }}
+      scroll={{ x: 920, y: '100%' }}
       locale={{
         emptyText: filter
           ? <span>没有匹配的项目 <Button type="link" size="small" onClick={onClearFilter}>清空筛选</Button></span>

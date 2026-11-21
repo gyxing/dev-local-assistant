@@ -17,6 +17,7 @@ import PackageCacheCleaner from './components/PackageCacheCleaner';
 import HostsManager from './components/HostsManager';
 import PortManager from './components/PortManager';
 import SystemSettings from './components/SystemSettings';
+import MainWindowTitleBar from './components/MainWindowTitleBar';
 import WorkspaceAppearance from './WorkspaceAppearance';
 import useAppSettings from './useAppSettings';
 import useSystemMedia from './useSystemMedia';
@@ -113,46 +114,49 @@ function DeveloperAssistantWorkspace({ appSettings }: { appSettings: ReturnType<
   };
 
   return (
-    <Layout className="developer-assistant">
-      <Layout.Sider className="developer-assistant__sider" theme="light" width={190} collapsed={collapsed} collapsedWidth={54}>
-        <div className="developer-assistant__sidebar">
-          <Menu
-            className="developer-assistant__menu"
-            mode="inline"
-            inlineIndent={12}
-            items={moduleMenu}
-            selectedKeys={settingsActive ? [] : [activeModule]}
-            onClick={handleModuleChange}
-            aria-label="本地助手模块"
-          />
-
-          <div className="developer-assistant__sidebar-footer">
+    <div className="developer-assistant-window">
+      <MainWindowTitleBar />
+      <Layout className="developer-assistant">
+        <Layout.Sider className="developer-assistant__sider" theme="light" width={190} collapsed={collapsed} collapsedWidth={54}>
+          <div className="developer-assistant__sidebar">
             <Menu
+              className="developer-assistant__menu"
               mode="inline"
               inlineIndent={12}
-              items={settingsMenu}
-              selectedKeys={settingsActive ? ['system-settings'] : []}
+              items={moduleMenu}
+              selectedKeys={settingsActive ? [] : [activeModule]}
               onClick={handleModuleChange}
-              aria-label="系统设置入口"
+              aria-label="本地助手模块"
             />
-            {!collapsed && (
-              <div className="developer-assistant__status" role="status">
-                <Badge status={connected ? 'success' : 'warning'} text={connected ? '本地服务已连接' : '本地服务未连接'} />
-              </div>
-            )}
-          </div>
-        </div>
-      </Layout.Sider>
 
-      <Layout.Content className="developer-assistant__content" ref={content}>
-        {activeModule === 'node-modules' ? <CleanerPage /> : null}
-        {activeModule === 'package-cache' ? <PackageCacheCleaner /> : null}
-        {activeModule === 'port-manager' ? <PortManager /> : null}
-        {activeModule === 'hosts-manager' ? <HostsManager onDirtyChange={setHostsDirty} /> : null}
-        {activeModule === 'desktop-notes' ? <DesktopNotesManager /> : null}
-        {activeModule === 'desktop-calendar' ? <DesktopCalendarManager /> : null}
-        {activeModule === 'system-settings' ? <SystemSettings appSettings={appSettings} /> : null}
-      </Layout.Content>
-    </Layout>
+            <div className="developer-assistant__sidebar-footer">
+              <Menu
+                mode="inline"
+                inlineIndent={12}
+                items={settingsMenu}
+                selectedKeys={settingsActive ? ['system-settings'] : []}
+                onClick={handleModuleChange}
+                aria-label="系统设置入口"
+              />
+              {!collapsed && (
+                <div className="developer-assistant__status" role="status">
+                  <Badge status={connected ? 'success' : 'warning'} text={connected ? '本地服务已连接' : '本地服务未连接'} />
+                </div>
+              )}
+            </div>
+          </div>
+        </Layout.Sider>
+
+        <Layout.Content className="developer-assistant__content" ref={content}>
+          {activeModule === 'node-modules' ? <CleanerPage /> : null}
+          {activeModule === 'package-cache' ? <PackageCacheCleaner /> : null}
+          {activeModule === 'port-manager' ? <PortManager /> : null}
+          {activeModule === 'hosts-manager' ? <HostsManager onDirtyChange={setHostsDirty} /> : null}
+          {activeModule === 'desktop-notes' ? <DesktopNotesManager /> : null}
+          {activeModule === 'desktop-calendar' ? <DesktopCalendarManager /> : null}
+          {activeModule === 'system-settings' ? <SystemSettings appSettings={appSettings} /> : null}
+        </Layout.Content>
+      </Layout>
+    </div>
   );
 }

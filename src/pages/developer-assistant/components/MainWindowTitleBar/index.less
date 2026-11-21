@@ -1,0 +1,45 @@
+.main-window-titlebar {
+  flex: none;
+  height: var(--titlebar-height);
+  background: var(--toolbox-titlebar);
+  box-shadow: inset 0 -1px var(--toolbox-divider);
+  color: var(--toolbox-text);
+  -webkit-app-region: drag;
+  user-select: none;
+}
+
+.main-window-titlebar__area {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 100%;
+  width: env(titlebar-area-width, 100%);
+  min-width: min(100%, 340px);
+  padding-inline: 10px;
+  white-space: nowrap;
+}
+
+.main-window-titlebar__name {
+  margin-inline-end: 6px;
+  font-size: var(--toolbox-font-body);
+  font-weight: 600;
+}
+
+.main-window-titlebar__menus {
+  display: flex;
+  align-items: center;
+  -webkit-app-region: no-drag;
+}
+
+.main-window-titlebar__command {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.main-window-titlebar__command kbd {
+  color: var(--toolbox-muted);
+  font: inherit;
+  font-size: var(--toolbox-font-caption);
+}

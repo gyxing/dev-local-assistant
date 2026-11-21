@@ -149,7 +149,10 @@ export default function DesktopCalendarPage() {
           <span className="desktop-calendar__month-label">
             {year} 年 {month} 月
           </span>
-          {monthFestival ? <span className="desktop-calendar__month-festival">{monthFestival}</span> : null}
+          <div className="desktop-calendar__month-meta">
+            {monthFestival ? <span className="desktop-calendar__month-festival" title={monthFestival}>{monthFestival}</span> : null}
+            <span className="desktop-calendar__today-key" aria-hidden="true">今天</span>
+          </div>
         </header>
 
         <CalendarGrid

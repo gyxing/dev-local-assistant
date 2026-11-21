@@ -17,7 +17,7 @@ export default function ResultsCard({ title, extra, children, fill = false }: Re
       extra={extra}
       style={fill ? { display: 'flex', flexDirection: 'column', flex: '1 1 auto', minHeight: 0 } : { flex: 'none' }}
       styles={{
-        header: { flex: 'none', paddingBlock: extra ? 6 : undefined, paddingInline: 12 },
+        header: { flex: 'none', paddingBlock: extra ? 8 : undefined, paddingInline: 14 },
         body: fill ? { display: 'flex', flexDirection: 'column', flex: '1 1 auto', minHeight: 0 } : undefined,
       }}
     >

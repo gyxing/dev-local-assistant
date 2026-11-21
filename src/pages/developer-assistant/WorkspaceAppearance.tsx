@@ -3,6 +3,7 @@ import { LoadingOutlined } from '@ant-design/icons';
 import { useLayoutEffect, useMemo } from 'react';
 import type { ReactNode } from 'react';
 import type { MainWindowTheme } from '@shared/app-settings-types';
+import { resolveMainWindowScheme } from '../../../shared/main-window-appearance';
 import { getWorkspaceTheme } from './theme';
 import useSystemMedia from './useSystemMedia';
 import './theme.less';
@@ -16,7 +17,7 @@ interface WorkspaceAppearanceProps {
 export default function WorkspaceAppearance({ preference, children }: WorkspaceAppearanceProps) {
   const systemDark = useSystemMedia('(prefers-color-scheme: dark)');
   const reduceMotion = useSystemMedia('(prefers-reduced-motion: reduce)');
-  const scheme = preference === 'system' ? (systemDark ? 'dark' : 'light') : preference;
+  const scheme = resolveMainWindowScheme(preference, systemDark);
   const { config, colors } = useMemo(() => getWorkspaceTheme(scheme, reduceMotion), [scheme, reduceMotion]);
 
   useLayoutEffect(() => {

@@ -23,7 +23,7 @@ export default function CalendarGrid({
   return (
     <div className="desktop-calendar__grid">
       {WEEKDAY_LABELS.map((label) => (
-        <div key={label} className="desktop-calendar__weekday-cell">
+        <div key={label} className={`desktop-calendar__weekday-cell${label === '六' || label === '日' ? ' is-weekend' : ''}`}>
           {label}
         </div>
       ))}
@@ -32,7 +32,9 @@ export default function CalendarGrid({
         const holiday = holidayMap.get(cell.isoDate);
         const festival = showFestivals ? cell.festivals[0] : undefined;
         const solarTerm = showSolarTerms ? cell.solarTerm : '';
-        const subText = festival ?? (solarTerm || (showLunar ? cell.lunarText : ''));
+        // 有节日或节气时优先显示，农历小字作为其余日期的补充。
+        const event = festival ?? solarTerm;
+        const subText = event || (showLunar ? cell.lunarText : '');
 
         return (
           <div
@@ -47,18 +49,18 @@ export default function CalendarGrid({
               .filter(Boolean)
               .join(' ')}
           >
-            <div className="desktop-calendar__day-heading">
-              <span className="desktop-calendar__day-number">{cell.day}</span>
-              {showHolidayMarks && holiday ? (
-                <span
-                  className={`desktop-calendar__mark${holiday.isOffDay ? ' is-off' : ' is-work'}`}
-                  aria-label={holiday.isOffDay ? '休息日' : '补班日'}
-                >
-                  {holiday.isOffDay ? '休' : '班'}
-                </span>
-              ) : null}
-            </div>
-            {subText ? <span className="desktop-calendar__day-sub" title={subText}>{subText}</span> : null}
+            <span className="desktop-calendar__day-number">{cell.day}</span>
+            {subText ? (
+              <span className={`desktop-calendar__day-sub${event ? ' is-event' : ''}`} title={subText}>{subText}</span>
+            ) : null}
+            {showHolidayMarks && holiday ? (
+              <span
+                className={`desktop-calendar__mark${holiday.isOffDay ? ' is-off' : ' is-work'}`}
+                aria-label={holiday.isOffDay ? '休息日' : '补班日'}
+              >
+                {holiday.isOffDay ? '休' : '班'}
+              </span>
+            ) : null}
           </div>
         );
       })}

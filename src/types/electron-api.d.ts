@@ -107,8 +107,13 @@ declare global {
     clearNodeModules?: ClearNodeModulesApi;
     developerAssistant?: DeveloperAssistantApi;
     appSettings?: AppSettingsApi;
+    mainWindowMenu?: {
+      getGroups: () => Promise<MainWindowMenuGroup[]>;
+      runCommand: (id: number) => Promise<void>;
+    };
     desktopNotes?: DesktopNotesApi;
     desktopCalendar?: DesktopCalendarApi;
     trayPanel?: TrayPanelApi;
   }
 }
+import type { MainWindowMenuGroup } from '@shared/main-window-appearance';

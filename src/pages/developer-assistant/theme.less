@@ -1,5 +1,5 @@
 html[data-toolbox-theme] {
-  --toolbox-gap: 10px;
+  --toolbox-gap: 12px;
   --toolbox-mono: 'Cascadia Mono', Consolas, 'Microsoft YaHei UI', monospace;
   --toolbox-modal-top: clamp(16px, 8vh, 64px);
 
@@ -7,6 +7,7 @@ html[data-toolbox-theme] {
   background: var(--toolbox-canvas);
   color: var(--toolbox-text);
   font-family: 'Segoe UI', 'Microsoft YaHei UI', system-ui, sans-serif;
+  font-size: var(--toolbox-font-body);
 
   body {
     margin: 0;
@@ -34,6 +35,14 @@ html[data-toolbox-theme] {
     flex: none;
   }
 
+  .ant-modal-header {
+    margin-block-end: 12px;
+  }
+
+  .ant-modal-footer {
+    margin-block-start: 16px;
+  }
+
   .ant-modal:not(.ant-modal-confirm) .ant-modal-body {
     min-height: 0;
     overflow: auto;
@@ -55,8 +64,17 @@ html[data-toolbox-theme] {
     overflow-wrap: anywhere;
   }
 
+  .ant-modal-confirm-btns {
+    margin-block-start: 16px;
+  }
+
   .ant-empty-description {
     color: var(--toolbox-muted);
+  }
+
+  // Ant Design 默认缩小行内代码，地址和校验值遵循主窗口的最小字号。
+  .ant-typography code {
+    font-size: var(--toolbox-font-caption);
   }
 
   .ant-table-placeholder .ant-table-cell {
@@ -82,7 +100,7 @@ html[data-toolbox-theme='dark'] {
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 10px 16px;
-  padding-bottom: 2px;
+  padding-bottom: 4px;
 }
 
 .toolbox-page-header__copy {
@@ -111,7 +129,7 @@ html[data-toolbox-theme='dark'] {
 }
 
 .toolbox-page-header__description {
-  font-size: 13px;
+  font-size: var(--toolbox-font-caption);
   line-height: 1.55;
 }
 
@@ -161,8 +179,12 @@ html[data-toolbox-theme='dark'] {
 
 .toolbox-mono {
   font-family: var(--toolbox-mono);
-  font-size: 12px;
+  font-size: var(--toolbox-font-caption);
   font-variant-numeric: tabular-nums;
+}
+
+.toolbox-data-table .toolbox-mono {
+  font-size: inherit;
 }
 
 .toolbox-position-panel {
@@ -174,7 +196,7 @@ html[data-toolbox-theme='dark'] {
   border-radius: var(--toolbox-radius-control);
   background: var(--toolbox-position-fill);
   color: var(--toolbox-muted);
-  font-size: 12px;
+  font-size: var(--toolbox-font-caption);
 }
 
 .toolbox-position-panel--preset {
@@ -188,6 +210,6 @@ html[data-toolbox-theme='dark'] {
   align-items: center;
   justify-content: space-between;
   gap: 8px 16px;
-  min-height: 34px;
-  padding: 4px 0;
+  min-height: 36px;
+  padding: 6px 0;
 }

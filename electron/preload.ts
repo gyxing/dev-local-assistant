@@ -64,6 +64,13 @@ contextBridge.exposeInMainWorld('appSettings', {
   save: (patch: AppSettingsUpdate) => ipcRenderer.invoke(IPC_CHANNELS.appSettingsSave, patch),
 });
 
+if (process.platform === 'win32') {
+  contextBridge.exposeInMainWorld('mainWindowMenu', {
+    getGroups: () => ipcRenderer.invoke(IPC_CHANNELS.mainWindowMenu),
+    runCommand: (id: number) => ipcRenderer.invoke(IPC_CHANNELS.mainWindowMenuCommand, id),
+  });
+}
+
 contextBridge.exposeInMainWorld('desktopNotes', {
   getSnapshot: () => ipcRenderer.invoke(IPC_CHANNELS.desktopNotesGetSnapshot),
   openWindow: () => ipcRenderer.invoke(IPC_CHANNELS.desktopNotesOpenWindow),

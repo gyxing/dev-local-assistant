@@ -1,15 +1,35 @@
+.cleaner-toolbar {
+  gap: 10px 12px;
+}
+
+.cleaner-toolbar__main,
+.cleaner-toolbar__secondary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  min-width: 0;
+  gap: 8px;
+}
+
+.cleaner-toolbar__main {
+  flex: 1 1 390px;
+}
+
+.cleaner-toolbar__secondary {
+  flex: 0 1 auto;
+}
+
 .cleaner-toolbar__label {
   flex: none;
-  font-size: 12px;
 }
 
 .cleaner-toolbar__path {
-  flex: 1 1 130px;
+  flex: 1 1 180px;
   min-width: 0;
   padding: 6px 9px;
   overflow: hidden;
   color: var(--toolbox-muted);
-  line-height: 18px;
+  line-height: 1.4;
   text-overflow: ellipsis;
   white-space: nowrap;
   background: var(--toolbox-inset);
@@ -18,18 +38,20 @@
 }
 
 .cleaner-toolbar__history {
-  flex: 0 1 152px;
-  width: 152px;
+  flex: 0 1 184px;
+  width: 184px;
   min-width: 0;
 }
 
-@container toolbox-content (max-width: 720px) {
-  .cleaner-toolbar__path {
-    flex-basis: 65%;
+// 窄窗把次要操作整体换行，让主操作旁的路径优先占用横向空间。
+@container toolbox-content (max-width: 850px) {
+  .cleaner-toolbar__main,
+  .cleaner-toolbar__secondary {
+    flex-basis: 100%;
   }
 
   .cleaner-toolbar__history {
-    flex: 1 1 140px;
-    min-width: 0;
+    flex: 1 1 160px;
+    max-width: 288px;
   }
 }
