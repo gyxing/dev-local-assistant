@@ -10,6 +10,7 @@
   --cal-event: #79532d;
   --cal-rule: #55412b30;
   --cal-today-bg: #f4dfb5;
+  --cal-today-highlight: color-mix(in srgb, var(--cal-today-bg) 60%, transparent);
   --cal-today-ink: #69420e;
   --cal-rest-bg: #f3d8d8;
   --cal-rest-ink: #7d3036;
@@ -41,7 +42,9 @@
   --cal-event: #e7c694;
   --cal-rule: #e2e5df29;
   --cal-today-bg: #4a3925;
-  --cal-today-ink: #ffe3ad;
+  // 深色壁纸下提高当天底色的不透明度，避免高亮被背景纹理淹没。
+  --cal-today-highlight: rgb(153 106 40 / 85%);
+  --cal-today-ink: #fff1d4;
   --cal-rest-bg: #683b40;
   --cal-rest-ink: #ffe4e4;
   --cal-work-bg: #304961;
@@ -284,7 +287,7 @@
 }
 
 .desktop-calendar__day.is-today {
-  background: color-mix(in srgb, var(--cal-today-bg) 60%, transparent);
+  background: var(--cal-today-highlight);
 
   .desktop-calendar__day-number,
   .desktop-calendar__day-sub {
