@@ -111,6 +111,10 @@ declare global {
       getGroups: () => Promise<MainWindowMenuGroup[]>;
       runCommand: (id: number) => Promise<void>;
     };
+    mainWindowAbout?: {
+      getVersion: () => Promise<string>;
+      openProjectHome: () => Promise<void>;
+    };
     desktopNotes?: DesktopNotesApi;
     desktopCalendar?: DesktopCalendarApi;
     trayPanel?: TrayPanelApi;

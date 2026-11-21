@@ -9,9 +9,7 @@
   --cal-gold: #875517;
   --cal-event: #79532d;
   --cal-rule: #55412b30;
-  --cal-rim: #fdf7eaa8;
   --cal-today-bg: #f4dfb5;
-  --cal-today-edge: #ad7a31;
   --cal-today-ink: #69420e;
   --cal-rest-bg: #f3d8d8;
   --cal-rest-ink: #7d3036;
@@ -27,7 +25,6 @@
   padding: 22px 20px;
   overflow: hidden;
   background: rgb(var(--cal-surface) / var(--cal-opacity));
-  border: 1px solid var(--cal-rim);
   border-radius: 16px;
   color: var(--cal-text);
   font-family: 'Segoe UI', 'Microsoft YaHei UI', system-ui, sans-serif;
@@ -43,9 +40,7 @@
   --cal-gold: #f1c77e;
   --cal-event: #e7c694;
   --cal-rule: #e2e5df29;
-  --cal-rim: #f5f1e54c;
   --cal-today-bg: #4a3925;
-  --cal-today-edge: #b48743;
   --cal-today-ink: #ffe3ad;
   --cal-rest-bg: #683b40;
   --cal-rest-ink: #ffe4e4;
@@ -85,11 +80,11 @@
 }
 
 .desktop-calendar__accent {
-  width: 38px;
-  height: 2px;
+  width: 64px;
+  height: 3px;
   margin: 16px 0 14px;
   border-radius: 2px;
-  background: var(--cal-gold);
+  background: linear-gradient(90deg, #d79436, transparent);
 }
 
 .desktop-calendar__clock-details {
@@ -115,10 +110,10 @@
   display: inline-flex;
   align-items: center;
   min-height: 24px;
-  padding: 1px 8px;
-  border: 1px solid color-mix(in srgb, var(--cal-gold) 38%, transparent);
+  padding: 1px 10px;
   border-radius: 999px;
-  color: var(--cal-gold);
+  background: rgb(239 155 59 / 14%);
+  color: var(--cal-text);
   font-size: 13px;
   font-weight: 650;
   letter-spacing: 0.07em;
@@ -187,21 +182,17 @@
   min-height: 0;
 }
 
-.desktop-calendar__month-title,
-.desktop-calendar__month-meta {
-  display: flex;
+.desktop-calendar__month-title {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: baseline;
   gap: 6px;
   min-width: 0;
-}
-
-.desktop-calendar__month-title {
-  justify-content: space-between;
   margin-bottom: 9px;
 }
 
 .desktop-calendar__month-label {
-  flex: none;
+  grid-column: 2;
   font-size: 20px;
   font-weight: 680;
   letter-spacing: -0.025em;
@@ -210,29 +201,13 @@
 }
 
 .desktop-calendar__month-festival {
+  grid-column: 3;
   overflow: hidden;
   color: var(--cal-event);
   font-size: 12px;
   text-overflow: ellipsis;
+  text-align: right;
   white-space: nowrap;
-}
-
-.desktop-calendar__today-key {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  gap: 5px;
-  color: var(--cal-muted);
-  font-size: 12px;
-  white-space: nowrap;
-
-  &::before {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--cal-gold);
-    content: '';
-  }
 }
 
 .desktop-calendar__grid {
@@ -309,8 +284,7 @@
 }
 
 .desktop-calendar__day.is-today {
-  background: var(--cal-today-bg);
-  box-shadow: inset 0 0 0 1px var(--cal-today-edge);
+  background: color-mix(in srgb, var(--cal-today-bg) 60%, transparent);
 
   .desktop-calendar__day-number,
   .desktop-calendar__day-sub {
@@ -408,8 +382,7 @@
 
   .desktop-calendar__weekday {
     min-height: 0;
-    padding: 0;
-    border: 0;
+    padding: 1px 7px;
     letter-spacing: 0;
   }
 

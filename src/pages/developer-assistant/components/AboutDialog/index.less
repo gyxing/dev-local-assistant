@@ -1,0 +1,44 @@
+.about-dialog__brand {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  margin-block: 8px;
+  color: var(--toolbox-text);
+  font-size: 20px;
+}
+
+.about-dialog__version {
+  padding: 1px 8px;
+  border-radius: var(--toolbox-radius-control);
+  background: var(--toolbox-preset-fill);
+  color: var(--toolbox-text);
+  font-size: var(--toolbox-font-caption);
+  overflow-wrap: anywhere;
+}
+
+.about-dialog__intro {
+  margin: 0 0 12px;
+  color: var(--toolbox-text);
+  font-size: var(--toolbox-font-body);
+}
+
+.about-dialog__features {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 6px 12px;
+  margin: 0;
+  padding-block-start: 10px;
+  border-top: 1px solid var(--toolbox-divider);
+  font-size: var(--toolbox-font-caption);
+
+  dt {
+    color: var(--toolbox-text);
+    font-weight: 600;
+  }
+
+  dd {
+    margin: 0;
+    color: var(--toolbox-muted);
+  }
+}

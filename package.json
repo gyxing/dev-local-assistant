@@ -1,7 +1,7 @@
 {
   "name": "devbox",
   "productName": "本地助手",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "面向开发者的本地效率工具集",
   "private": true,
   "packageManager": "pnpm@11.10.0",

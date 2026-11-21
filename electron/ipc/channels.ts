@@ -56,5 +56,7 @@ export const IPC_CHANNELS = {
   appSettingsSave: 'app-settings:save',
   mainWindowMenu: 'main-window:menu',
   mainWindowMenuCommand: 'main-window:menu-command',
+  mainWindowAboutVersion: 'main-window:about-version',
+  mainWindowOpenProjectHome: 'main-window:open-project-home',
   taskEvent: 'task:event',
 } as const;

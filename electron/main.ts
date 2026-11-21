@@ -1,7 +1,7 @@
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { app, BrowserWindow, dialog, ipcMain, nativeTheme, type IpcMainInvokeEvent } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, nativeTheme, shell, type IpcMainInvokeEvent } from 'electron';
 import { AppSettingsController, BACKGROUND_LAUNCH_ARG } from './app-settings-controller';
 import { DesktopNotesController, getAppIconPath } from './desktop-notes-controller';
 import { DesktopCalendarController } from './desktop-calendar-controller';
@@ -31,6 +31,9 @@ import type {
   ProtectedProject,
   TaskEvent,
 } from '../shared/task-types';
+
+// 项目主页由主进程固定，渲染层不能指定要打开的地址。
+const PROJECT_HOME_URL = 'https://github.com/gyxing/dev-local-assistant';
 
 let mainWindow: BrowserWindow | undefined;
 let configService: ConfigService;
@@ -199,12 +202,12 @@ function registerConfigHandlers() {
   );
 }
 
-/** 应用设置只能从主窗口主框架读取和修改。 */
+/** 主窗口专用命令只接受应用页面的主框架调用。 */
 function assertMainWindowSender(event: IpcMainInvokeEvent): BrowserWindow {
   if (!mainWindow || mainWindow.isDestroyed()
     || event.sender !== mainWindow.webContents
     || event.senderFrame !== mainWindow.webContents.mainFrame) {
-    throw new Error('请在本地助手主窗口中操作系统设置');
+    throw new Error('请在本地助手主窗口中执行此操作');
   }
   const expected = process.env.NODE_ENV === 'development'
     ? new URL(process.env.DEV_SERVER_URL ?? 'http://127.0.0.1:8137')
@@ -214,9 +217,29 @@ function assertMainWindowSender(event: IpcMainInvokeEvent): BrowserWindow {
   actual.hash = '';
   expected.hash = '';
   if (actual.href !== expected.href) {
-    throw new Error('请在本地助手主窗口中操作系统设置');
+    throw new Error('请在本地助手主窗口中执行此操作');
   }
   return mainWindow;
+}
+
+function registerMainWindowHandlers() {
+  if (process.platform !== 'win32') return;
+
+  ipcMain.handle(IPC_CHANNELS.mainWindowMenu, (event) => {
+    assertMainWindowSender(event);
+    return getMainWindowMenu();
+  });
+  ipcMain.handle(IPC_CHANNELS.mainWindowMenuCommand, (event, id: unknown) => {
+    runMainWindowMenuCommand(assertMainWindowSender(event), id);
+  });
+  ipcMain.handle(IPC_CHANNELS.mainWindowAboutVersion, (event) => {
+    assertMainWindowSender(event);
+    return app.getVersion();
+  });
+  ipcMain.handle(IPC_CHANNELS.mainWindowOpenProjectHome, (event) => {
+    assertMainWindowSender(event);
+    return shell.openExternal(PROJECT_HOME_URL);
+  });
 }
 
 function registerAppSettingsHandlers() {
@@ -233,15 +256,6 @@ function registerAppSettingsHandlers() {
       return settings;
     });
   });
-  if (process.platform === 'win32') {
-    ipcMain.handle(IPC_CHANNELS.mainWindowMenu, (event) => {
-      assertMainWindowSender(event);
-      return getMainWindowMenu();
-    });
-    ipcMain.handle(IPC_CHANNELS.mainWindowMenuCommand, (event, id: unknown) => {
-      runMainWindowMenuCommand(assertMainWindowSender(event), id);
-    });
-  }
 }
 
 function sendTaskEvent(event: TaskEvent) {
@@ -545,6 +559,7 @@ if (!hasSingleInstanceLock) {
     registerDialogHandlers();
     registerConfigHandlers();
     registerAppSettingsHandlers();
+    registerMainWindowHandlers();
     registerScanHandlers();
     registerDeleteHandlers();
     registerDeveloperToolsHandlers();

@@ -69,6 +69,10 @@ if (process.platform === 'win32') {
     getGroups: () => ipcRenderer.invoke(IPC_CHANNELS.mainWindowMenu),
     runCommand: (id: number) => ipcRenderer.invoke(IPC_CHANNELS.mainWindowMenuCommand, id),
   });
+  contextBridge.exposeInMainWorld('mainWindowAbout', {
+    getVersion: () => ipcRenderer.invoke(IPC_CHANNELS.mainWindowAboutVersion),
+    openProjectHome: () => ipcRenderer.invoke(IPC_CHANNELS.mainWindowOpenProjectHome),
+  });
 }
 
 contextBridge.exposeInMainWorld('desktopNotes', {

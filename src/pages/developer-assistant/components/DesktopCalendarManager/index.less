@@ -2,21 +2,24 @@
   display: flex;
   flex-direction: column;
   gap: var(--toolbox-gap);
-  height: 100%;
-  min-height: 0;
-  overflow: auto;
-  scrollbar-width: thin;
+  min-width: 0;
+  min-height: 100%;
 }
 
 .desktop-calendar-manager > .ant-card {
   flex: none;
 }
 
-/* 运行设置在有足够空间时并排显示。 */
+/* 显示与校时并排时用竖线，窄栏换行后用横线。 */
 .desktop-calendar-manager__runtime {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px 16px;
+  column-gap: 12px;
+}
+
+.desktop-calendar-manager__runtime > .toolbox-setting-row + .toolbox-setting-row {
+  padding-inline-start: 12px;
+  border-inline-start: 1px solid var(--toolbox-divider);
 }
 
 .desktop-calendar-manager__item-text {
@@ -161,5 +164,19 @@
 @container toolbox-content (max-width: 800px) {
   .desktop-calendar-manager__switches {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container toolbox-content (max-width: 560px) {
+  .desktop-calendar-manager__runtime {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 4px;
+  }
+
+  .desktop-calendar-manager__runtime > .toolbox-setting-row + .toolbox-setting-row {
+    padding-block-start: 10px;
+    padding-inline-start: 0;
+    border-block-start: 1px solid var(--toolbox-divider);
+    border-inline-start: 0;
   }
 }
