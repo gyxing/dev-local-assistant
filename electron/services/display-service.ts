@@ -7,7 +7,10 @@ function toRect(rect: Electron.Rectangle): DisplayRect {
 
 /** 按屏幕排列顺序给显示器编号，主屏优先在前面的位置不变。 */
 function sortDisplays(displays: Electron.Display[]) {
-  return [...displays].sort((left, right) => left.bounds.x - right.bounds.x || left.bounds.y - right.bounds.y);
+  return [...displays].sort(
+    (left, right) =>
+      left.bounds.x - right.bounds.x || left.bounds.y - right.bounds.y,
+  );
 }
 
 export function listDisplays(): DisplayInfo[] {
@@ -31,9 +34,13 @@ export function listDisplays(): DisplayInfo[] {
 /** 按保存的 id 找显示器，找不到时回退主屏。 */
 export function getDisplayInfo(displayId?: string): DisplayInfo {
   const displays = listDisplays();
-  const matched = displayId ? displays.find((display) => display.id === displayId) : undefined;
+  const matched = displayId
+    ? displays.find((display) => display.id === displayId)
+    : undefined;
 
-  return matched ?? displays.find((display) => display.isPrimary) ?? displays[0];
+  return (
+    matched ?? displays.find((display) => display.isPrimary) ?? displays[0]
+  );
 }
 
 export function getDisplayWorkArea(displayId?: string): DisplayRect {
@@ -45,7 +52,9 @@ export function isDisplayAvailable(displayId?: string): boolean {
     return true;
   }
 
-  return screen.getAllDisplays().some((display) => String(display.id) === displayId);
+  return screen
+    .getAllDisplays()
+    .some((display) => String(display.id) === displayId);
 }
 
 export function getPrimaryDisplayId(): string {

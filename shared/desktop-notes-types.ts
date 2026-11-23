@@ -22,7 +22,12 @@ export interface DesktopNotesWorkArea {
 }
 
 /** 便利贴窗口相对屏幕的停靠位置。 */
-export type DesktopNotesAnchor = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | 'center';
+export type DesktopNotesAnchor =
+  | 'top-left'
+  | 'top-right'
+  | 'bottom-left'
+  | 'bottom-right'
+  | 'center';
 
 /** 便利贴窗口在屏幕上的位置和大小，单位为像素。 */
 export interface DesktopNotesWindowBounds {

@@ -60,11 +60,17 @@ export function getNextNoteColor(index: number) {
   return NOTE_COLORS[index % NOTE_COLORS.length];
 }
 
-export function clampDesktopNoteNumber(value: number, min: number, max: number) {
+export function clampDesktopNoteNumber(
+  value: number,
+  min: number,
+  max: number,
+) {
   return Number.isFinite(value) ? Math.min(max, Math.max(min, value)) : min;
 }
 
-export function normalizeDesktopNoteSettings(settings: Partial<DesktopNoteSettings>): DesktopNoteSettings {
+export function normalizeDesktopNoteSettings(
+  settings: Partial<DesktopNoteSettings>,
+): DesktopNoteSettings {
   return {
     desktopMode: settings.desktopMode === true,
     maxVisibleNotes: clampDesktopNoteNumber(
@@ -78,8 +84,16 @@ export function normalizeDesktopNoteSettings(settings: Partial<DesktopNoteSettin
       20,
     ),
     showPinnedOnly: Boolean(settings.showPinnedOnly),
-    opacity: clampDesktopNoteNumber(settings.opacity ?? DEFAULT_DESKTOP_NOTE_SETTINGS.opacity, 0.35, 1),
-    fontSize: clampDesktopNoteNumber(settings.fontSize ?? DEFAULT_DESKTOP_NOTE_SETTINGS.fontSize, 12, 28),
+    opacity: clampDesktopNoteNumber(
+      settings.opacity ?? DEFAULT_DESKTOP_NOTE_SETTINGS.opacity,
+      0.35,
+      1,
+    ),
+    fontSize: clampDesktopNoteNumber(
+      settings.fontSize ?? DEFAULT_DESKTOP_NOTE_SETTINGS.fontSize,
+      12,
+      28,
+    ),
   };
 }
 
@@ -92,7 +106,12 @@ export function normalizeDesktopNotesWindowBounds(
 
   const width = clampDesktopNoteNumber(value.width ?? Number.NaN, 320, 2400);
   const height = clampDesktopNoteNumber(value.height ?? Number.NaN, 240, 1600);
-  if (!Number.isFinite(value.x) || !Number.isFinite(value.y) || !Number.isFinite(value.width) || !Number.isFinite(value.height)) {
+  if (
+    !Number.isFinite(value.x) ||
+    !Number.isFinite(value.y) ||
+    !Number.isFinite(value.width) ||
+    !Number.isFinite(value.height)
+  ) {
     return undefined;
   }
 

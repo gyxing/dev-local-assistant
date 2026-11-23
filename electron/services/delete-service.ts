@@ -1,8 +1,8 @@
+import { shell } from 'electron';
 import { randomUUID } from 'node:crypto';
 import { constants } from 'node:fs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { shell } from 'electron';
 import type {
   DeleteFailureDetail,
   DeleteMode,
@@ -39,7 +39,12 @@ interface DeleteError extends Error {
 export class DeleteService {
   private tasks = new Map<string, DeleteRuntimeTask>();
 
-  start(items: NodeModulesItem[], mode: DeleteMode, onItem: DeleteItemHandler, onStatus: DeleteStatusHandler) {
+  start(
+    items: NodeModulesItem[],
+    mode: DeleteMode,
+    onItem: DeleteItemHandler,
+    onStatus: DeleteStatusHandler,
+  ) {
     const taskId = randomUUID();
     const task: DeleteRuntimeTask = {
       id: taskId,
@@ -52,7 +57,12 @@ export class DeleteService {
     };
 
     this.tasks.set(taskId, task);
-    onStatus(taskId, task.status, task.currentItemId, this.createProgress(task));
+    onStatus(
+      taskId,
+      task.status,
+      task.currentItemId,
+      this.createProgress(task),
+    );
     void this.run(taskId, items, onItem, onStatus);
     return taskId;
   }
@@ -65,7 +75,12 @@ export class DeleteService {
 
     task.pauseRequested = true;
     task.status = 'delete-pausing';
-    onStatus(taskId, task.status, task.currentItemId, this.createProgress(task));
+    onStatus(
+      taskId,
+      task.status,
+      task.currentItemId,
+      this.createProgress(task),
+    );
   }
 
   resume(
@@ -81,12 +96,23 @@ export class DeleteService {
 
     task.pauseRequested = false;
     task.status = 'deleting';
-    const pendingItems = availableItems.filter((item) => task.pendingItemIds.includes(item.id));
-    onStatus(taskId, task.status, task.currentItemId, this.createProgress(task));
+    const pendingItems = availableItems.filter((item) =>
+      task.pendingItemIds.includes(item.id),
+    );
+    onStatus(
+      taskId,
+      task.status,
+      task.currentItemId,
+      this.createProgress(task),
+    );
     void this.run(taskId, pendingItems, onItem, onStatus);
   }
 
-  finish(taskId: string, onItem: DeleteItemHandler, onStatus: DeleteStatusHandler) {
+  finish(
+    taskId: string,
+    onItem: DeleteItemHandler,
+    onStatus: DeleteStatusHandler,
+  ) {
     const task = this.tasks.get(taskId);
     if (!task) {
       return;
@@ -116,7 +142,12 @@ export class DeleteService {
     for (const item of items) {
       if (task.pauseRequested || task.status === 'finished') {
         task.status = task.status === 'finished' ? 'finished' : 'delete-paused';
-        onStatus(taskId, task.status, task.currentItemId, this.createProgress(task));
+        onStatus(
+          taskId,
+          task.status,
+          task.currentItemId,
+          this.createProgress(task),
+        );
         return;
       }
 
@@ -135,21 +166,41 @@ export class DeleteService {
         }
 
         task.completedItemIds.push(item.id);
-        task.pendingItemIds = task.pendingItemIds.filter((itemId) => itemId !== item.id);
+        task.pendingItemIds = task.pendingItemIds.filter(
+          (itemId) => itemId !== item.id,
+        );
         onItem({ itemId: item.id, status: 'deleted' });
-        onStatus(taskId, task.status, task.currentItemId, this.createProgress(task));
+        onStatus(
+          taskId,
+          task.status,
+          task.currentItemId,
+          this.createProgress(task),
+        );
       } catch (error) {
-        const failureDetail = await this.createFailureDetail(task.mode, item, resolvedPath, existsBeforeDelete, error);
+        const failureDetail = await this.createFailureDetail(
+          task.mode,
+          item,
+          resolvedPath,
+          existsBeforeDelete,
+          error,
+        );
 
         task.failedItemIds.push(item.id);
-        task.pendingItemIds = task.pendingItemIds.filter((itemId) => itemId !== item.id);
+        task.pendingItemIds = task.pendingItemIds.filter(
+          (itemId) => itemId !== item.id,
+        );
         onItem({
           itemId: item.id,
           status: 'delete-failed',
           errorMessage: failureDetail.errorMessage,
           failureDetail,
         });
-        onStatus(taskId, task.status, task.currentItemId, this.createProgress(task));
+        onStatus(
+          taskId,
+          task.status,
+          task.currentItemId,
+          this.createProgress(task),
+        );
       }
     }
 
@@ -160,7 +211,10 @@ export class DeleteService {
 
   private createProgress(task: DeleteRuntimeTask): DeleteTaskProgress {
     return {
-      totalCount: task.completedItemIds.length + task.failedItemIds.length + task.pendingItemIds.length,
+      totalCount:
+        task.completedItemIds.length +
+        task.failedItemIds.length +
+        task.pendingItemIds.length,
       completedCount: task.completedItemIds.length,
       failedCount: task.failedItemIds.length,
       pendingCount: task.pendingItemIds.length,
@@ -177,7 +231,9 @@ export class DeleteService {
   ): Promise<DeleteFailureDetail> {
     const normalizedError = this.normalizeError(error);
     const existsAfterFailure = await this.pathExists(resolvedPath);
-    const canAccessAfterFailure = existsAfterFailure ? await this.canAccessPath(resolvedPath) : false;
+    const canAccessAfterFailure = existsAfterFailure
+      ? await this.canAccessPath(resolvedPath)
+      : false;
 
     return {
       mode,
@@ -191,8 +247,18 @@ export class DeleteService {
       existsBeforeDelete,
       existsAfterFailure,
       canAccessAfterFailure,
-      diagnosticMessage: this.createDiagnosticMessage(mode, normalizedError, existsAfterFailure, canAccessAfterFailure),
-      suggestion: this.createSuggestion(mode, normalizedError, existsAfterFailure, canAccessAfterFailure),
+      diagnosticMessage: this.createDiagnosticMessage(
+        mode,
+        normalizedError,
+        existsAfterFailure,
+        canAccessAfterFailure,
+      ),
+      suggestion: this.createSuggestion(
+        mode,
+        normalizedError,
+        existsAfterFailure,
+        canAccessAfterFailure,
+      ),
     };
   }
 
@@ -245,7 +311,10 @@ export class DeleteService {
       return '目录仍包含未能删除的文件，常见于并发写入、权限不足或目录内有链接。';
     }
 
-    if (mode === 'trash' && error.message === 'Failed to perform delete operation') {
+    if (
+      mode === 'trash' &&
+      error.message === 'Failed to perform delete operation'
+    ) {
       return '系统回收站拒绝了该目录，常见原因是文件被占用、权限不足、磁盘不支持回收站或路径异常。';
     }
 
@@ -266,7 +335,12 @@ export class DeleteService {
       return '重新扫描当前目录即可刷新列表。';
     }
 
-    if (error.code === 'EPERM' || error.code === 'EACCES' || error.code === 'EBUSY' || !canAccessAfterFailure) {
+    if (
+      error.code === 'EPERM' ||
+      error.code === 'EACCES' ||
+      error.code === 'EBUSY' ||
+      !canAccessAfterFailure
+    ) {
       return '关闭正在使用该项目的终端、编辑器和 dev server 后重试；必要时以管理员身份运行应用。';
     }
 

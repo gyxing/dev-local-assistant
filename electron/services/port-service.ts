@@ -27,7 +27,9 @@ interface ProcessInfo {
 
 function getAddressPort(address: string) {
   const normalizedAddress = address.trim();
-  const portText = normalizedAddress.slice(normalizedAddress.lastIndexOf(':') + 1);
+  const portText = normalizedAddress.slice(
+    normalizedAddress.lastIndexOf(':') + 1,
+  );
   const port = Number(portText);
 
   return Number.isFinite(port) ? port : undefined;
@@ -41,7 +43,9 @@ function createPortUsageId(item: Omit<PortUsageItem, 'id'>) {
 function parseNetstatOutput(output: string, query: PortUsageQuery) {
   const targetPorts = query.ports?.length ? new Set(query.ports) : undefined;
   const lines = output.split(/\r?\n/);
-  const items: Array<Omit<PortUsageItem, 'id' | 'processName' | 'processPath' | 'commandLine'>> = [];
+  const items: Array<
+    Omit<PortUsageItem, 'id' | 'processName' | 'processPath' | 'commandLine'>
+  > = [];
 
   for (const line of lines) {
     const trimmedLine = line.trim();
@@ -112,7 +116,11 @@ function parsePowerShellProcessOutput(output: string): ProcessInfo {
   }
 
   try {
-    const data = JSON.parse(output) as { Name?: string; ExecutablePath?: string; CommandLine?: string };
+    const data = JSON.parse(output) as {
+      Name?: string;
+      ExecutablePath?: string;
+      CommandLine?: string;
+    };
     return {
       name: data.Name,
       path: data.ExecutablePath,
@@ -131,7 +139,9 @@ export class PortService {
       windowsHide: true,
     });
     const items = parseNetstatOutput(stdout, query);
-    const processInfoMap = await this.getProcessInfoMap([...new Set(items.map((item) => item.pid))]);
+    const processInfoMap = await this.getProcessInfoMap([
+      ...new Set(items.map((item) => item.pid)),
+    ]);
 
     return items.map((item) => {
       const processInfo = processInfoMap.get(item.pid);
@@ -149,7 +159,11 @@ export class PortService {
     const processInfo = await this.getProcessInfo(pid);
     const processName = processInfo.name?.toLowerCase();
 
-    if (pid <= 4 || pid === process.pid || (processName && PROTECTED_PROCESS_NAMES.has(processName))) {
+    if (
+      pid <= 4 ||
+      pid === process.pid ||
+      (processName && PROTECTED_PROCESS_NAMES.has(processName))
+    ) {
       return {
         success: false,
         message: '该进程属于系统或当前应用保护范围，已拒绝结束',
@@ -158,7 +172,10 @@ export class PortService {
 
     try {
       const command = process.platform === 'win32' ? 'taskkill' : 'kill';
-      const args = process.platform === 'win32' ? ['/PID', String(pid), '/F'] : ['-TERM', String(pid)];
+      const args =
+        process.platform === 'win32'
+          ? ['/PID', String(pid), '/F']
+          : ['-TERM', String(pid)];
       const { stdout, stderr } = await execFileAsync(command, args, {
         timeout: COMMAND_TIMEOUT_MS,
         windowsHide: true,
@@ -172,13 +189,16 @@ export class PortService {
     } catch (error: unknown) {
       return {
         success: false,
-        message: error instanceof Error ? error.message : `结束进程 ${pid} 失败`,
+        message:
+          error instanceof Error ? error.message : `结束进程 ${pid} 失败`,
       };
     }
   }
 
   private async getProcessInfoMap(pids: number[]) {
-    const entries = await Promise.all(pids.map(async (pid) => [pid, await this.getProcessInfo(pid)] as const));
+    const entries = await Promise.all(
+      pids.map(async (pid) => [pid, await this.getProcessInfo(pid)] as const),
+    );
     return new Map(entries);
   }
 

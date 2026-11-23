@@ -1,11 +1,15 @@
 import { randomUUID } from 'node:crypto';
-import fs from 'node:fs/promises';
 import type { Dirent } from 'node:fs';
+import fs from 'node:fs/promises';
 import path from 'node:path';
 import type { NodeModulesItem, ScanTaskStatus } from '../../shared/task-types';
 
 type ScanItemHandler = (item: NodeModulesItem) => void;
-type ScanStatusHandler = (taskId: string, status: ScanTaskStatus, message?: string) => void;
+type ScanStatusHandler = (
+  taskId: string,
+  status: ScanTaskStatus,
+  message?: string,
+) => void;
 type PathSkipReason = 'protected' | 'ignored';
 type PathSkipChecker = (targetPath: string) => PathSkipReason | undefined;
 
@@ -82,7 +86,12 @@ export class ScanService {
     }
 
     this.tasks.delete(taskId);
-    return this.start(previousTask.rootPath, onItemFound, onStatus, getPathSkipReason);
+    return this.start(
+      previousTask.rootPath,
+      onItemFound,
+      onStatus,
+      getPathSkipReason,
+    );
   }
 
   private async run(
@@ -105,13 +114,22 @@ export class ScanService {
         continue;
       }
 
-      await this.scanDirectory(task, currentDir, onItemFound, getPathSkipReason);
+      await this.scanDirectory(
+        task,
+        currentDir,
+        onItemFound,
+        getPathSkipReason,
+      );
     }
 
     task.running = false;
 
     if (task.paused) {
-      onStatus(taskId, 'scan-paused', this.createStatusMessage(task, '扫描已暂停，结果可能不完整'));
+      onStatus(
+        taskId,
+        'scan-paused',
+        this.createStatusMessage(task, '扫描已暂停，结果可能不完整'),
+      );
       return;
     }
 
@@ -143,15 +161,21 @@ export class ScanService {
       return;
     }
 
-    const hasPackageJson = entries.some((entry) => entry.isFile() && entry.name === 'package.json');
-    const nodeModulesEntry = entries.find((entry) => entry.isDirectory() && entry.name === 'node_modules');
+    const hasPackageJson = entries.some(
+      (entry) => entry.isFile() && entry.name === 'package.json',
+    );
+    const nodeModulesEntry = entries.find(
+      (entry) => entry.isDirectory() && entry.name === 'node_modules',
+    );
 
     if (nodeModulesEntry) {
       const nodeModulesPath = path.join(currentDir, 'node_modules');
 
       if (!task.seenNodeModules.has(nodeModulesPath)) {
         task.seenNodeModules.add(nodeModulesPath);
-        onItemFound(this.createItem(currentDir, nodeModulesPath, hasPackageJson));
+        onItemFound(
+          this.createItem(currentDir, nodeModulesPath, hasPackageJson),
+        );
       }
     }
 
@@ -164,7 +188,11 @@ export class ScanService {
     }
   }
 
-  private createItem(projectPath: string, nodeModulesPath: string, hasPackageJson: boolean): NodeModulesItem {
+  private createItem(
+    projectPath: string,
+    nodeModulesPath: string,
+    hasPackageJson: boolean,
+  ): NodeModulesItem {
     return {
       id: randomUUID(),
       projectName: hasPackageJson ? path.basename(projectPath) : '未识别项目',
@@ -178,10 +206,17 @@ export class ScanService {
 
   private createStatusMessage(task: ScanTask, prefix?: string) {
     const skippedMessage =
-      task.skippedProtectedCount > 0 ? `已跳过 ${task.skippedProtectedCount} 个保护项目` : undefined;
+      task.skippedProtectedCount > 0
+        ? `已跳过 ${task.skippedProtectedCount} 个保护项目`
+        : undefined;
     const ignoredMessage =
-      task.skippedIgnoredCount > 0 ? `已忽略 ${task.skippedIgnoredCount} 个项目` : undefined;
+      task.skippedIgnoredCount > 0
+        ? `已忽略 ${task.skippedIgnoredCount} 个项目`
+        : undefined;
 
-    return [prefix, skippedMessage, ignoredMessage].filter(Boolean).join('，') || undefined;
+    return (
+      [prefix, skippedMessage, ignoredMessage].filter(Boolean).join('，') ||
+      undefined
+    );
   }
 }

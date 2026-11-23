@@ -28,11 +28,17 @@ export function decodeHostsBuffer(buffer: Buffer): DecodedHostsFile {
   }
 
   if (buffer.subarray(0, 2).equals(Buffer.from([0xff, 0xfe]))) {
-    return { text: buffer.subarray(2).toString('utf16le'), encoding: 'utf16le' };
+    return {
+      text: buffer.subarray(2).toString('utf16le'),
+      encoding: 'utf16le',
+    };
   }
 
   if (buffer.subarray(0, 2).equals(Buffer.from([0xfe, 0xff]))) {
-    return { text: swapUtf16Bytes(buffer.subarray(2)).toString('utf16le'), encoding: 'utf16be' };
+    return {
+      text: swapUtf16Bytes(buffer.subarray(2)).toString('utf16le'),
+      encoding: 'utf16be',
+    };
   }
 
   try {
@@ -41,18 +47,26 @@ export function decodeHostsBuffer(buffer: Buffer): DecodedHostsFile {
       encoding: 'utf8',
     };
   } catch {
-    throw new Error('Hosts 文件不是受支持的 UTF-8 或 UTF-16 编码，已阻止编辑以避免乱码');
+    throw new Error(
+      'Hosts 文件不是受支持的 UTF-8 或 UTF-16 编码，已阻止编辑以避免乱码',
+    );
   }
 }
 
 /** 按原始编码重新生成 Hosts 字节。 */
-export function encodeHostsText(text: string, encoding: HostsFileEncoding): Buffer {
+export function encodeHostsText(
+  text: string,
+  encoding: HostsFileEncoding,
+): Buffer {
   if (encoding === 'utf8') {
     return Buffer.from(text, 'utf8');
   }
 
   if (encoding === 'utf8-bom') {
-    return Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), Buffer.from(text, 'utf8')]);
+    return Buffer.concat([
+      Buffer.from([0xef, 0xbb, 0xbf]),
+      Buffer.from(text, 'utf8'),
+    ]);
   }
 
   const utf16LeBuffer = Buffer.from(text, 'utf16le');
@@ -60,5 +74,8 @@ export function encodeHostsText(text: string, encoding: HostsFileEncoding): Buff
     return Buffer.concat([Buffer.from([0xff, 0xfe]), utf16LeBuffer]);
   }
 
-  return Buffer.concat([Buffer.from([0xfe, 0xff]), swapUtf16Bytes(utf16LeBuffer)]);
+  return Buffer.concat([
+    Buffer.from([0xfe, 0xff]),
+    swapUtf16Bytes(utf16LeBuffer),
+  ]);
 }

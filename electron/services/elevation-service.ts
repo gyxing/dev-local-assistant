@@ -24,7 +24,9 @@ function escapePowerShellLiteral(value: string): string {
 
 function normalizeElevationError(error: unknown): Error {
   const normalizedError: ExecFileError =
-    error instanceof Error ? (error as ExecFileError) : new Error('管理员操作失败');
+    error instanceof Error
+      ? (error as ExecFileError)
+      : new Error('管理员操作失败');
   if (normalizedError.killed) {
     return new Error('管理员操作等待超时');
   }
@@ -36,7 +38,12 @@ function normalizeElevationError(error: unknown): Error {
   if (exitCode === 12) {
     return new Error('管理员写入后的 Hosts 文件校验失败');
   }
-  if (exitCode === 1 || /1223|cancel(?:ed|led)|取消/i.test(`${normalizedError.message}\n${normalizedError.stderr ?? ''}`)) {
+  if (
+    exitCode === 1 ||
+    /1223|cancel(?:ed|led)|取消/i.test(
+      `${normalizedError.message}\n${normalizedError.stderr ?? ''}`,
+    )
+  ) {
     return new Error('已取消管理员授权，Hosts 文件未修改');
   }
 
@@ -69,7 +76,9 @@ export class ElevationService {
   }
 
   private async runRequest(request: ElevatedRequest): Promise<void> {
-    const requestBase64 = Buffer.from(JSON.stringify(request), 'utf8').toString('base64');
+    const requestBase64 = Buffer.from(JSON.stringify(request), 'utf8').toString(
+      'base64',
+    );
     const systemRoot = process.env.SystemRoot || process.env.windir;
     if (!systemRoot) {
       throw new Error('无法识别 Windows 系统目录');
@@ -89,10 +98,20 @@ export class ElevationService {
     const encodedCommand = Buffer.from(command, 'utf16le').toString('base64');
 
     try {
-      await execFileAsync(powerShellPath, ['-NoLogo', '-NoProfile', '-NonInteractive', '-EncodedCommand', encodedCommand], {
-        timeout: ELEVATION_TIMEOUT_MS,
-        windowsHide: true,
-      });
+      await execFileAsync(
+        powerShellPath,
+        [
+          '-NoLogo',
+          '-NoProfile',
+          '-NonInteractive',
+          '-EncodedCommand',
+          encodedCommand,
+        ],
+        {
+          timeout: ELEVATION_TIMEOUT_MS,
+          windowsHide: true,
+        },
+      );
     } catch (error: unknown) {
       throw normalizeElevationError(error);
     }

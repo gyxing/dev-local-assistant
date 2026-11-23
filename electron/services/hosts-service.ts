@@ -34,11 +34,15 @@ function calculateSha256(buffer: Buffer): string {
 }
 
 function isPermissionError(error: unknown): boolean {
-  return error instanceof Error && ['EACCES', 'EPERM'].includes((error as FileSystemError).code ?? '');
+  return (
+    error instanceof Error &&
+    ['EACCES', 'EPERM'].includes((error as FileSystemError).code ?? '')
+  );
 }
 
 function formatBackupTimestamp(date: Date): string {
-  const pad = (value: number, length = 2) => String(value).padStart(length, '0');
+  const pad = (value: number, length = 2) =>
+    String(value).padStart(length, '0');
   return [
     date.getFullYear(),
     pad(date.getMonth() + 1),
@@ -71,7 +75,13 @@ export class HostsService {
       throw new Error('无法识别 Windows 系统目录');
     }
 
-    this.hostsPath = path.resolve(systemRoot, 'System32', 'drivers', 'etc', 'hosts');
+    this.hostsPath = path.resolve(
+      systemRoot,
+      'System32',
+      'drivers',
+      'etc',
+      'hosts',
+    );
     this.backupDirectory = path.resolve(userDataPath, 'hosts-backups');
     this.tempDirectory = path.resolve(userDataPath, 'hosts-temp');
   }
@@ -84,12 +94,16 @@ export class HostsService {
 
   async listBackups(): Promise<HostsBackupItem[]> {
     await fs.mkdir(this.backupDirectory, { recursive: true });
-    const directoryEntries = await fs.readdir(this.backupDirectory, { withFileTypes: true });
+    const directoryEntries = await fs.readdir(this.backupDirectory, {
+      withFileTypes: true,
+    });
     const backups = await Promise.all(
       directoryEntries
         .filter(
           (entry) =>
-            entry.isFile() && (entry.name === ORIGINAL_BACKUP_NAME || HISTORY_BACKUP_PATTERN.test(entry.name)),
+            entry.isFile() &&
+            (entry.name === ORIGINAL_BACKUP_NAME ||
+              HISTORY_BACKUP_PATTERN.test(entry.name)),
         )
         .map((entry) => this.createBackupItem(entry.name)),
     );
@@ -106,16 +120,24 @@ export class HostsService {
     return this.runMutation(async () => {
       const currentSnapshot = await this.readSnapshot();
       this.assertSourceHash(currentSnapshot.hash, request.sourceHash);
-      const originalBackup = await this.ensureOriginalBackup(currentSnapshot.buffer);
+      const originalBackup = await this.ensureOriginalBackup(
+        currentSnapshot.buffer,
+      );
       const decoded = decodeHostsBuffer(currentSnapshot.buffer);
-      const nextText = renderHostsText(parseHostsText(decoded.text), request.entries);
+      const nextText = renderHostsText(
+        parseHostsText(decoded.text),
+        request.entries,
+      );
       const nextBuffer = encodeHostsText(nextText, decoded.encoding);
       const nextHash = calculateSha256(nextBuffer);
       let usedElevation = false;
 
       if (nextHash !== currentSnapshot.hash) {
         await this.createHistoryBackup(currentSnapshot.buffer);
-        usedElevation = await this.writeHostsBuffer(nextBuffer, currentSnapshot.hash);
+        usedElevation = await this.writeHostsBuffer(
+          nextBuffer,
+          currentSnapshot.hash,
+        );
       }
 
       const savedSnapshot = await this.readSnapshot();
@@ -132,12 +154,19 @@ export class HostsService {
     });
   }
 
-  async restore(backupId: string, sourceHash: string): Promise<HostsMutationResult> {
+  async restore(
+    backupId: string,
+    sourceHash: string,
+  ): Promise<HostsMutationResult> {
     return this.runMutation(async () => {
       const currentSnapshot = await this.readSnapshot();
       this.assertSourceHash(currentSnapshot.hash, sourceHash);
-      const originalBackup = await this.ensureOriginalBackup(currentSnapshot.buffer);
-      const backup = (await this.listBackups()).find((item) => item.id === backupId);
+      const originalBackup = await this.ensureOriginalBackup(
+        currentSnapshot.buffer,
+      );
+      const backup = (await this.listBackups()).find(
+        (item) => item.id === backupId,
+      );
       if (!backup) {
         throw new Error('备份不存在或已经失效');
       }
@@ -147,7 +176,10 @@ export class HostsService {
       // 恢复前先验证编码，避免把无法管理的内容写回系统文件。
       decodeHostsBuffer(backupBuffer);
       await this.createHistoryBackup(currentSnapshot.buffer);
-      const usedElevation = await this.writeHostsBuffer(backupBuffer, currentSnapshot.hash);
+      const usedElevation = await this.writeHostsBuffer(
+        backupBuffer,
+        currentSnapshot.hash,
+      );
       const restoredSnapshot = await this.readSnapshot();
       if (restoredSnapshot.hash !== calculateSha256(backupBuffer)) {
         throw new Error('Hosts 备份恢复后的内容校验失败');
@@ -162,7 +194,10 @@ export class HostsService {
     });
   }
 
-  private async createDocument(snapshot: HostsSnapshot, originalBackup: HostsBackupItem): Promise<HostsDocument> {
+  private async createDocument(
+    snapshot: HostsSnapshot,
+    originalBackup: HostsBackupItem,
+  ): Promise<HostsDocument> {
     const decoded = decodeHostsBuffer(snapshot.buffer);
     const parsed = parseHostsText(decoded.text);
     return {
@@ -183,7 +218,8 @@ export class HostsService {
     const afterStat = await fs.stat(this.hostsPath);
     if (
       retryCount === 0 &&
-      (beforeStat.mtimeMs !== afterStat.mtimeMs || beforeStat.size !== afterStat.size)
+      (beforeStat.mtimeMs !== afterStat.mtimeMs ||
+        beforeStat.size !== afterStat.size)
     ) {
       return this.readSnapshot(1);
     }
@@ -210,8 +246,13 @@ export class HostsService {
     try {
       await fs.writeFile(originalBackupPath, buffer, { flag: 'wx' });
     } catch (error: unknown) {
-      if (!(error instanceof Error) || (error as FileSystemError).code !== 'EEXIST') {
-        throw new Error(`创建原始 Hosts 备份失败：${error instanceof Error ? error.message : '未知错误'}`);
+      if (
+        !(error instanceof Error) ||
+        (error as FileSystemError).code !== 'EEXIST'
+      ) {
+        throw new Error(
+          `创建原始 Hosts 备份失败：${error instanceof Error ? error.message : '未知错误'}`,
+        );
       }
     }
 
@@ -221,7 +262,9 @@ export class HostsService {
   private async createHistoryBackup(buffer: Buffer): Promise<HostsBackupItem> {
     await fs.mkdir(this.backupDirectory, { recursive: true });
     const backupName = `hosts.${formatBackupTimestamp(new Date())}.${randomUUID().slice(0, 8)}.bak`;
-    await fs.writeFile(this.resolveBackupPath(backupName), buffer, { flag: 'wx' });
+    await fs.writeFile(this.resolveBackupPath(backupName), buffer, {
+      flag: 'wx',
+    });
     const backup = await this.createBackupItem(backupName);
     await this.pruneHistoryBackups();
     return backup;
@@ -229,7 +272,10 @@ export class HostsService {
 
   private async createBackupItem(backupName: string): Promise<HostsBackupItem> {
     const backupPath = this.resolveBackupPath(backupName);
-    const [buffer, stat] = await Promise.all([fs.readFile(backupPath), fs.stat(backupPath)]);
+    const [buffer, stat] = await Promise.all([
+      fs.readFile(backupPath),
+      fs.stat(backupPath),
+    ]);
     return {
       id: backupName,
       kind: backupName === ORIGINAL_BACKUP_NAME ? 'original' : 'history',
@@ -240,7 +286,9 @@ export class HostsService {
   }
 
   private async pruneHistoryBackups(): Promise<void> {
-    const historyBackups = (await this.listBackups()).filter((item) => item.kind === 'history');
+    const historyBackups = (await this.listBackups()).filter(
+      (item) => item.kind === 'history',
+    );
     for (const backup of historyBackups.slice(HISTORY_BACKUP_LIMIT)) {
       await fs.unlink(this.resolveBackupPath(backup.id));
     }
@@ -249,7 +297,8 @@ export class HostsService {
   private resolveBackupPath(backupName: string): string {
     if (
       path.basename(backupName) !== backupName ||
-      (backupName !== ORIGINAL_BACKUP_NAME && !HISTORY_BACKUP_PATTERN.test(backupName))
+      (backupName !== ORIGINAL_BACKUP_NAME &&
+        !HISTORY_BACKUP_PATTERN.test(backupName))
     ) {
       throw new Error('备份标识不合法');
     }
@@ -267,9 +316,14 @@ export class HostsService {
     }
   }
 
-  private async writeHostsBuffer(buffer: Buffer, expectedSourceHash: string): Promise<boolean> {
+  private async writeHostsBuffer(
+    buffer: Buffer,
+    expectedSourceHash: string,
+  ): Promise<boolean> {
     await fs.mkdir(this.tempDirectory, { recursive: true });
-    const temporaryDirectory = await fs.mkdtemp(path.join(this.tempDirectory, 'write-'));
+    const temporaryDirectory = await fs.mkdtemp(
+      path.join(this.tempDirectory, 'write-'),
+    );
     const payloadPath = path.join(temporaryDirectory, 'hosts.payload');
     const expectedPayloadHash = calculateSha256(buffer);
     await fs.writeFile(payloadPath, buffer, { flag: 'wx' });

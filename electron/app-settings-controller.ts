@@ -16,7 +16,8 @@ export class AppSettingsController {
   private preferences: AppSettingsPreferences = {
     mainWindowTheme: DEFAULT_APP_RUNTIME_PREFERENCES.mainWindowTheme,
     launchAtLogin: DEFAULT_APP_RUNTIME_PREFERENCES.launchAtLogin,
-    quitWhenMainWindowCloses: DEFAULT_APP_RUNTIME_PREFERENCES.quitWhenMainWindowCloses,
+    quitWhenMainWindowCloses:
+      DEFAULT_APP_RUNTIME_PREFERENCES.quitWhenMainWindowCloses,
   };
 
   constructor(private readonly configService: ConfigService) {}
@@ -46,8 +47,11 @@ export class AppSettingsController {
     let loginItemEnabled: boolean | undefined;
     if (this.loginItemSupported) {
       try {
-        const status = app.getLoginItemSettings({ args: [BACKGROUND_LAUNCH_ARG] });
-        loginItemEnabled = status.openAtLogin && status.executableWillLaunchAtLogin;
+        const status = app.getLoginItemSettings({
+          args: [BACKGROUND_LAUNCH_ARG],
+        });
+        loginItemEnabled =
+          status.openAtLogin && status.executableWillLaunchAtLogin;
       } catch (error) {
         console.warn('读取 Windows 登录项状态失败', error);
       }
@@ -63,11 +67,15 @@ export class AppSettingsController {
   /** 保存明确提交的字段；写入失败时尝试恢复已变更的系统登录项。 */
   async save(input: unknown): Promise<AppSettingsSnapshot> {
     const patch = validateUpdate(input);
-    let previousLoginItem: ReturnType<typeof app.getLoginItemSettings> | undefined;
+    let previousLoginItem:
+      | ReturnType<typeof app.getLoginItemSettings>
+      | undefined;
 
     try {
       if (this.loginItemSupported && patch.launchAtLogin !== undefined) {
-        previousLoginItem = app.getLoginItemSettings({ args: [BACKGROUND_LAUNCH_ARG] });
+        previousLoginItem = app.getLoginItemSettings({
+          args: [BACKGROUND_LAUNCH_ARG],
+        });
         this.applyLoginItem(patch.launchAtLogin);
       }
       const saved = await this.configService.saveRuntime(patch);
@@ -82,7 +90,9 @@ export class AppSettingsController {
           console.error('恢复之前的 Windows 登录项失败', rollbackError);
         }
       }
-      throw new Error('未能保存系统设置，请检查当前状态后重试。', { cause: error });
+      throw new Error('未能保存系统设置，请检查当前状态后重试。', {
+        cause: error,
+      });
     }
   }
 
@@ -91,20 +101,33 @@ export class AppSettingsController {
     return process.platform === 'win32' && app.isPackaged;
   }
 
-  private updatePreferences({ mainWindowTheme, launchAtLogin, quitWhenMainWindowCloses }: AppSettingsPreferences) {
-    this.preferences = { mainWindowTheme, launchAtLogin, quitWhenMainWindowCloses };
+  private updatePreferences({
+    mainWindowTheme,
+    launchAtLogin,
+    quitWhenMainWindowCloses,
+  }: AppSettingsPreferences) {
+    this.preferences = {
+      mainWindowTheme,
+      launchAtLogin,
+      quitWhenMainWindowCloses,
+    };
   }
 
   private applyLoginItem(enabled: boolean) {
     const args = [BACKGROUND_LAUNCH_ARG];
     app.setLoginItemSettings({ openAtLogin: enabled, args });
     const status = app.getLoginItemSettings({ args });
-    if (status.openAtLogin !== enabled || (enabled && !status.executableWillLaunchAtLogin)) {
+    if (
+      status.openAtLogin !== enabled ||
+      (enabled && !status.executableWillLaunchAtLogin)
+    ) {
       throw new Error('Windows 登录项未按预期更新');
     }
   }
 
-  private restoreLoginItem(previous: ReturnType<typeof app.getLoginItemSettings>) {
+  private restoreLoginItem(
+    previous: ReturnType<typeof app.getLoginItemSettings>,
+  ) {
     const args = [BACKGROUND_LAUNCH_ARG];
     // 回滚实际登记和启用状态，避免重新启用用户在 Windows 设置里停用的启动项。
     app.setLoginItemSettings({
@@ -113,8 +136,12 @@ export class AppSettingsController {
       args,
     });
     const current = app.getLoginItemSettings({ args });
-    if (current.openAtLogin !== previous.openAtLogin
-      || (previous.openAtLogin && current.executableWillLaunchAtLogin !== previous.executableWillLaunchAtLogin)) {
+    if (
+      current.openAtLogin !== previous.openAtLogin ||
+      (previous.openAtLogin &&
+        current.executableWillLaunchAtLogin !==
+          previous.executableWillLaunchAtLogin)
+    ) {
       throw new Error('Windows 登录项未恢复到原有状态');
     }
   }
@@ -132,7 +159,10 @@ function validateUpdate(input: unknown): AppSettingsUpdate {
       patch.mainWindowTheme = value;
       continue;
     }
-    if ((key === 'launchAtLogin' || key === 'quitWhenMainWindowCloses') && typeof value === 'boolean') {
+    if (
+      (key === 'launchAtLogin' || key === 'quitWhenMainWindowCloses') &&
+      typeof value === 'boolean'
+    ) {
       patch[key] = value;
       continue;
     }

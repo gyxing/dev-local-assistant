@@ -1,14 +1,19 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import type { CalendarHolidayDay, CalendarHolidayYear } from '../../shared/desktop-calendar-types';
+import type {
+  CalendarHolidayDay,
+  CalendarHolidayYear,
+} from '../../shared/desktop-calendar-types';
 
 const CACHE_DIR_NAME = 'calendar-holidays';
 /** 节假日数据只随国务院公告变化，缓存一周足够，过期后后台刷新 */
 const CACHE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 const REQUEST_TIMEOUT_MS = 8000;
 const HOLIDAY_SOURCES = [
-  (year: number) => `https://cdn.jsdelivr.net/gh/NateScarlet/holiday-cn@master/${year}.json`,
-  (year: number) => `https://raw.githubusercontent.com/NateScarlet/holiday-cn/master/${year}.json`,
+  (year: number) =>
+    `https://cdn.jsdelivr.net/gh/NateScarlet/holiday-cn@master/${year}.json`,
+  (year: number) =>
+    `https://raw.githubusercontent.com/NateScarlet/holiday-cn/master/${year}.json`,
 ];
 
 interface HolidayCacheFile {
@@ -78,11 +83,18 @@ export class HolidayService {
     try {
       const content = await fs.readFile(this.getCachePath(year), 'utf8');
       const parsed: unknown = JSON.parse(content);
-      if (!isRecord(parsed) || typeof parsed.fetchedAt !== 'number' || !Array.isArray(parsed.days)) {
+      if (
+        !isRecord(parsed) ||
+        typeof parsed.fetchedAt !== 'number' ||
+        !Array.isArray(parsed.days)
+      ) {
         return undefined;
       }
 
-      return { fetchedAt: parsed.fetchedAt, days: parseDays({ days: parsed.days }) };
+      return {
+        fetchedAt: parsed.fetchedAt,
+        days: parseDays({ days: parsed.days }),
+      };
     } catch {
       return undefined;
     }
@@ -101,10 +113,14 @@ export class HolidayService {
     }
   }
 
-  private async fetchYear(year: number): Promise<CalendarHolidayDay[] | undefined> {
+  private async fetchYear(
+    year: number,
+  ): Promise<CalendarHolidayDay[] | undefined> {
     for (const buildUrl of HOLIDAY_SOURCES) {
       try {
-        const response = await fetch(buildUrl(year), { signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
+        const response = await fetch(buildUrl(year), {
+          signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+        });
         if (!response.ok) {
           continue;
         }

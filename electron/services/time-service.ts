@@ -1,4 +1,7 @@
-import type { CalendarTimeInfo, CalendarTimeSource } from '../../shared/desktop-calendar-types';
+import type {
+  CalendarTimeInfo,
+  CalendarTimeSource,
+} from '../../shared/desktop-calendar-types';
 
 /** 10 分钟校准一次，足够抵消普通系统时钟漂移 */
 const SYNC_INTERVAL_MS = 10 * 60 * 1000;
@@ -30,7 +33,9 @@ function parseSuning(payload: unknown) {
   }
 
   // 苏宁返回形如 20261117233727 的北京时间，按 UTC+8 换成时间戳，避免受本机时区影响
-  const matched = /^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})$/.exec(payload.sysTime1);
+  const matched = /^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})$/.exec(
+    payload.sysTime1,
+  );
   if (!matched) {
     return undefined;
   }
@@ -46,8 +51,16 @@ function parseSuning(payload: unknown) {
 }
 
 const TIME_PROVIDERS: TimeProvider[] = [
-  { source: 'taobao', url: 'https://acs.m.taobao.com/gw/mtop.common.getTimestamp/', parse: parseTaobao },
-  { source: 'suning', url: 'https://quan.suning.com/getSysTime.do', parse: parseSuning },
+  {
+    source: 'taobao',
+    url: 'https://acs.m.taobao.com/gw/mtop.common.getTimestamp/',
+    parse: parseTaobao,
+  },
+  {
+    source: 'suning',
+    url: 'https://quan.suning.com/getSysTime.do',
+    parse: parseSuning,
+  },
 ];
 
 /**
@@ -76,7 +89,11 @@ export class TimeService {
   }
 
   getInfo(): CalendarTimeInfo {
-    return { offsetMs: this.offsetMs, syncedAt: this.syncedAt, source: this.source };
+    return {
+      offsetMs: this.offsetMs,
+      syncedAt: this.syncedAt,
+      source: this.source,
+    };
   }
 
   async sync(): Promise<CalendarTimeInfo> {
@@ -94,7 +111,9 @@ export class TimeService {
     for (const provider of TIME_PROVIDERS) {
       try {
         const startedAt = Date.now();
-        const response = await fetch(provider.url, { signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
+        const response = await fetch(provider.url, {
+          signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+        });
         if (!response.ok) {
           continue;
         }

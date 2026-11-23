@@ -46,7 +46,9 @@ export class DesktopCalendarController {
   private readonly reportError: (error: unknown) => void;
   private mainWindow?: BrowserWindow;
   private window?: BrowserWindow;
-  private settings: DesktopCalendarSettings = { ...DEFAULT_DESKTOP_CALENDAR_SETTINGS };
+  private settings: DesktopCalendarSettings = {
+    ...DEFAULT_DESKTOP_CALENDAR_SETTINGS,
+  };
   private pendingSettings: Promise<unknown> = Promise.resolve();
   private onStateChanged?: () => void;
 
@@ -73,19 +75,33 @@ export class DesktopCalendarController {
 
     // 显示器被拔掉时把窗口收回主屏
     screen.on('display-removed', () => {
-      void this.runSettingsAction(() => this.handleDisplayRemoved()).catch(this.reportError);
+      void this.runSettingsAction(() => this.handleDisplayRemoved()).catch(
+        this.reportError,
+      );
     });
   }
 
   registerIpc() {
-    ipcMain.handle(IPC_CHANNELS.desktopCalendarGetSnapshot, () => this.readSnapshot());
-    ipcMain.handle(IPC_CHANNELS.desktopCalendarOpenWindow, () => this.updateSettings({ enabled: true }));
-    ipcMain.handle(IPC_CHANNELS.desktopCalendarCloseWindow, () => this.updateSettings({ enabled: false }));
-    ipcMain.handle(IPC_CHANNELS.desktopCalendarSaveSettings, (_, patch: Partial<DesktopCalendarSettings>) =>
-      this.updateSettings(patch),
+    ipcMain.handle(IPC_CHANNELS.desktopCalendarGetSnapshot, () =>
+      this.readSnapshot(),
     );
-    ipcMain.handle(IPC_CHANNELS.desktopCalendarGetHolidays, (_, year: number) => this.getHolidays(year));
-    ipcMain.handle(IPC_CHANNELS.desktopCalendarGetTime, () => this.timeService.getInfo());
+    ipcMain.handle(IPC_CHANNELS.desktopCalendarOpenWindow, () =>
+      this.updateSettings({ enabled: true }),
+    );
+    ipcMain.handle(IPC_CHANNELS.desktopCalendarCloseWindow, () =>
+      this.updateSettings({ enabled: false }),
+    );
+    ipcMain.handle(
+      IPC_CHANNELS.desktopCalendarSaveSettings,
+      (_, patch: Partial<DesktopCalendarSettings>) =>
+        this.updateSettings(patch),
+    );
+    ipcMain.handle(IPC_CHANNELS.desktopCalendarGetHolidays, (_, year: number) =>
+      this.getHolidays(year),
+    );
+    ipcMain.handle(IPC_CHANNELS.desktopCalendarGetTime, () =>
+      this.timeService.getInfo(),
+    );
     ipcMain.handle(IPC_CHANNELS.desktopCalendarSyncTime, () => this.syncTime());
   }
 
@@ -105,23 +121,33 @@ export class DesktopCalendarController {
   }
 
   toggleWindow() {
-    return this.runSettingsAction(() => this.applySettings({ enabled: !this.getTrayState().windowOpen }));
+    return this.runSettingsAction(() =>
+      this.applySettings({ enabled: !this.getTrayState().windowOpen }),
+    );
   }
 
   toggleTheme() {
-    return this.runSettingsAction(() => this.applySettings({
-      theme: this.settings.theme === 'dark' ? 'light' : 'dark',
-    }));
+    return this.runSettingsAction(() =>
+      this.applySettings({
+        theme: this.settings.theme === 'dark' ? 'light' : 'dark',
+      }),
+    );
   }
 
   /** 两个入口共享校时结果，管理页和日历窗口无需等待轮询。 */
   async syncTime() {
     const info = await this.timeService.sync();
     if (this.window && !this.window.isDestroyed()) {
-      this.window.webContents.send(IPC_CHANNELS.desktopCalendarTimeChanged, info);
+      this.window.webContents.send(
+        IPC_CHANNELS.desktopCalendarTimeChanged,
+        info,
+      );
     }
     if (this.mainWindow && !this.mainWindow.isDestroyed()) {
-      this.mainWindow.webContents.send(IPC_CHANNELS.desktopCalendarTimeChanged, info);
+      this.mainWindow.webContents.send(
+        IPC_CHANNELS.desktopCalendarTimeChanged,
+        info,
+      );
     }
     return info;
   }
@@ -145,16 +171,22 @@ export class DesktopCalendarController {
     return this.runSettingsAction(() => this.applySettings(patch));
   }
 
-  private async applySettings(patch: Partial<DesktopCalendarSettings>): Promise<DesktopCalendarSnapshot> {
+  private async applySettings(
+    patch: Partial<DesktopCalendarSettings>,
+  ): Promise<DesktopCalendarSnapshot> {
     const previous = this.settings;
-    const nextSettings = normalizeDesktopCalendarSettings({ ...previous, ...patch });
+    const nextSettings = normalizeDesktopCalendarSettings({
+      ...previous,
+      ...patch,
+    });
     // 切换显示器后回到新屏右上角，避免沿用旧屏坐标
     if (nextSettings.displayId !== this.settings.displayId) {
       nextSettings.x = CALENDAR_UNPOSITIONED;
       nextSettings.y = CALENDAR_UNPOSITIONED;
     }
 
-    const needsWindow = patch.enabled === true && !this.getTrayState().windowOpen;
+    const needsWindow =
+      patch.enabled === true && !this.getTrayState().windowOpen;
     this.settings = nextSettings;
     try {
       if (needsWindow) {
@@ -186,7 +218,10 @@ export class DesktopCalendarController {
     }
 
     window.setBounds(this.resolveBounds());
-    window.webContents.send(IPC_CHANNELS.desktopCalendarSettingsChanged, this.settings);
+    window.webContents.send(
+      IPC_CHANNELS.desktopCalendarSettingsChanged,
+      this.settings,
+    );
   }
 
   /** 未定位时放到所选显示器右上角；已定位时限制在该显示器工作区内。 */
@@ -195,7 +230,10 @@ export class DesktopCalendarController {
     const workArea = getDisplayWorkArea(this.settings.displayId);
     const margin = 40;
 
-    if (this.settings.x === CALENDAR_UNPOSITIONED || this.settings.y === CALENDAR_UNPOSITIONED) {
+    if (
+      this.settings.x === CALENDAR_UNPOSITIONED ||
+      this.settings.y === CALENDAR_UNPOSITIONED
+    ) {
       return {
         width,
         height,
@@ -207,14 +245,23 @@ export class DesktopCalendarController {
     return {
       width,
       height,
-      x: Math.min(Math.max(this.settings.x, workArea.x), workArea.x + Math.max(0, workArea.width - width)),
-      y: Math.min(Math.max(this.settings.y, workArea.y), workArea.y + Math.max(0, workArea.height - height)),
+      x: Math.min(
+        Math.max(this.settings.x, workArea.x),
+        workArea.x + Math.max(0, workArea.width - width),
+      ),
+      y: Math.min(
+        Math.max(this.settings.y, workArea.y),
+        workArea.y + Math.max(0, workArea.height - height),
+      ),
     };
   }
 
   /** 保存的显示器被拔掉：回到主屏右上角并持久化。 */
   private async handleDisplayRemoved() {
-    if (!this.settings.displayId || isDisplayAvailable(this.settings.displayId)) {
+    if (
+      !this.settings.displayId ||
+      isDisplayAvailable(this.settings.displayId)
+    ) {
       return;
     }
 
@@ -270,12 +317,15 @@ export class DesktopCalendarController {
 
   private async loadRenderer(window: BrowserWindow) {
     if (process.env.NODE_ENV === 'development') {
-      const devServerUrl = process.env.DEV_SERVER_URL ?? 'http://127.0.0.1:8137';
+      const devServerUrl =
+        process.env.DEV_SERVER_URL ?? 'http://127.0.0.1:8137';
       await window.loadURL(`${devServerUrl}/#/desktop-calendar`);
       return;
     }
 
-    await window.loadFile(this.getRendererEntry(), { hash: '/desktop-calendar' });
+    await window.loadFile(this.getRendererEntry(), {
+      hash: '/desktop-calendar',
+    });
   }
 
   private destroyWindow() {
@@ -303,7 +353,10 @@ export class DesktopCalendarController {
   private publishSnapshot() {
     const snapshot = this.readSnapshot();
     if (this.mainWindow && !this.mainWindow.isDestroyed()) {
-      this.mainWindow.webContents.send(IPC_CHANNELS.desktopCalendarSnapshot, snapshot);
+      this.mainWindow.webContents.send(
+        IPC_CHANNELS.desktopCalendarSnapshot,
+        snapshot,
+      );
     }
     this.onStateChanged?.();
     return snapshot;

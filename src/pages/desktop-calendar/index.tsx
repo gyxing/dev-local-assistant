@@ -1,19 +1,24 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { DEFAULT_DESKTOP_CALENDAR_SETTINGS } from '../../../shared/desktop-calendar-state';
-import type { CalendarHolidayYear, DesktopCalendarSettings } from '../../../shared/desktop-calendar-types';
+import type {
+  CalendarHolidayYear,
+  DesktopCalendarSettings,
+} from '../../../shared/desktop-calendar-types';
 import CalendarGrid from './components/CalendarGrid';
 import ClockPanel from './components/ClockPanel';
 import { buildHolidayMap } from './holidays';
-import { buildMonthCells, describeDay, toIsoDate } from './lunar';
 import './index.less';
+import { buildMonthCells, describeDay, toIsoDate } from './lunar';
 
 /**
  * 桌面日历透明窗口：左侧当前时间，右侧农历月历，纯展示、点击穿透。
  */
 export default function DesktopCalendarPage() {
   const [now, setNow] = useState(() => new Date());
-  const [settings, setSettings] = useState<DesktopCalendarSettings>(DEFAULT_DESKTOP_CALENDAR_SETTINGS);
+  const [settings, setSettings] = useState<DesktopCalendarSettings>(
+    DEFAULT_DESKTOP_CALENDAR_SETTINGS,
+  );
   const [holidayYear, setHolidayYear] = useState<CalendarHolidayYear>();
   /** 主进程校准出的「服务端时间 - 本机时间」，0 表示使用本机时间 */
   const offsetRef = useRef(0);
@@ -126,10 +131,21 @@ export default function DesktopCalendarPage() {
   }, [year]);
 
   // todayIso 变化说明跨天了，需要重建月历高亮
-  const cells = useMemo(() => buildMonthCells(year, month, now), [year, month, todayIso]);
-  const detail = useMemo(() => describeDay(year, month, now.getDate()), [year, month, todayIso]);
-  const holidayMap = useMemo(() => buildHolidayMap(holidayYear?.days), [holidayYear]);
-  const monthFestival = settings.showFestivals ? detail.festivals[0] : undefined;
+  const cells = useMemo(
+    () => buildMonthCells(year, month, now),
+    [year, month, todayIso],
+  );
+  const detail = useMemo(
+    () => describeDay(year, month, now.getDate()),
+    [year, month, todayIso],
+  );
+  const holidayMap = useMemo(
+    () => buildHolidayMap(holidayYear?.days),
+    [holidayYear],
+  );
+  const monthFestival = settings.showFestivals
+    ? detail.festivals[0]
+    : undefined;
 
   return (
     // 不透明度只作用于卡片背景，文字始终不透明
@@ -149,7 +165,14 @@ export default function DesktopCalendarPage() {
           <span className="desktop-calendar__month-label">
             {year} 年 {month} 月
           </span>
-          {monthFestival ? <span className="desktop-calendar__month-festival" title={monthFestival}>{monthFestival}</span> : null}
+          {monthFestival ? (
+            <span
+              className="desktop-calendar__month-festival"
+              title={monthFestival}
+            >
+              {monthFestival}
+            </span>
+          ) : null}
         </header>
 
         <CalendarGrid

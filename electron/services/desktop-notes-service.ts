@@ -11,7 +11,10 @@ import {
   normalizeDesktopNoteSettings,
   normalizeDesktopNotesWindowBounds,
 } from '../../shared/desktop-notes-state';
-import type { DesktopNotesCacheInfo, DesktopNotesState } from '../../shared/desktop-notes-types';
+import type {
+  DesktopNotesCacheInfo,
+  DesktopNotesState,
+} from '../../shared/desktop-notes-types';
 
 const STATE_FILE_NAME = 'desktop-notes.json';
 
@@ -25,16 +28,24 @@ export function normalizeDesktopNotesState(value: unknown): DesktopNotesState {
     return createDefaultDesktopNotesState();
   }
 
-  const notes = Array.isArray(value.notes) ? value.notes.filter(isDesktopNote) : [];
+  const notes = Array.isArray(value.notes)
+    ? value.notes.filter(isDesktopNote)
+    : [];
   const settings = isRecord(value.settings) ? value.settings : {};
-  const rawBounds = isRecord(value.windowBounds) ? value.windowBounds : undefined;
+  const rawBounds = isRecord(value.windowBounds)
+    ? value.windowBounds
+    : undefined;
   const windowBounds = normalizeDesktopNotesWindowBounds(
     rawBounds
       ? {
           x: typeof rawBounds.x === 'number' ? rawBounds.x : Number.NaN,
           y: typeof rawBounds.y === 'number' ? rawBounds.y : Number.NaN,
-          width: typeof rawBounds.width === 'number' ? rawBounds.width : Number.NaN,
-          height: typeof rawBounds.height === 'number' ? rawBounds.height : Number.NaN,
+          width:
+            typeof rawBounds.width === 'number' ? rawBounds.width : Number.NaN,
+          height:
+            typeof rawBounds.height === 'number'
+              ? rawBounds.height
+              : Number.NaN,
         }
       : undefined,
   );
@@ -43,15 +54,24 @@ export function normalizeDesktopNotesState(value: unknown): DesktopNotesState {
     schemaVersion: DESKTOP_NOTES_SCHEMA_VERSION,
     notes,
     windowBounds,
-    displayId: typeof value.displayId === 'string' ? value.displayId : undefined,
+    displayId:
+      typeof value.displayId === 'string' ? value.displayId : undefined,
     settings: normalizeDesktopNoteSettings({
       ...DEFAULT_DESKTOP_NOTE_SETTINGS,
       desktopMode: settings.desktopMode === true,
-      maxVisibleNotes: typeof settings.maxVisibleNotes === 'number' ? settings.maxVisibleNotes : undefined,
-      maxLinesPerNote: typeof settings.maxLinesPerNote === 'number' ? settings.maxLinesPerNote : undefined,
+      maxVisibleNotes:
+        typeof settings.maxVisibleNotes === 'number'
+          ? settings.maxVisibleNotes
+          : undefined,
+      maxLinesPerNote:
+        typeof settings.maxLinesPerNote === 'number'
+          ? settings.maxLinesPerNote
+          : undefined,
       showPinnedOnly: settings.showPinnedOnly === true,
-      opacity: typeof settings.opacity === 'number' ? settings.opacity : undefined,
-      fontSize: typeof settings.fontSize === 'number' ? settings.fontSize : undefined,
+      opacity:
+        typeof settings.opacity === 'number' ? settings.opacity : undefined,
+      fontSize:
+        typeof settings.fontSize === 'number' ? settings.fontSize : undefined,
     }),
   };
 }
@@ -69,12 +89,15 @@ export class DesktopNotesService {
     return this.readState(createDefaultDesktopNotesState);
   }
 
-  private async readState(onMissing: () => DesktopNotesState): Promise<DesktopNotesState> {
+  private async readState(
+    onMissing: () => DesktopNotesState,
+  ): Promise<DesktopNotesState> {
     try {
       const content = await fs.readFile(this.filePath, 'utf8');
       return normalizeDesktopNotesState(JSON.parse(content));
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return onMissing();
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT')
+        return onMissing();
       if (error instanceof SyntaxError) return createDefaultDesktopNotesState();
       throw error;
     }
@@ -86,7 +109,9 @@ export class DesktopNotesService {
     onMissing = createDefaultDesktopNotesState,
   ): Promise<DesktopNotesState> {
     const task = this.pendingWrite.then(async () => {
-      const state = normalizeDesktopNotesState(update(await this.readState(onMissing)));
+      const state = normalizeDesktopNotesState(
+        update(await this.readState(onMissing)),
+      );
       await this.writeState(state);
       return state;
     });
@@ -99,7 +124,10 @@ export class DesktopNotesService {
     const tempPath = `${this.filePath}.${randomUUID()}.tmp`;
     try {
       // 同目录替换保证读者只会看到完整的 JSON。
-      await fs.writeFile(tempPath, JSON.stringify(state, null, 2), { encoding: 'utf8', flag: 'wx' });
+      await fs.writeFile(tempPath, JSON.stringify(state, null, 2), {
+        encoding: 'utf8',
+        flag: 'wx',
+      });
       await fs.rename(tempPath, this.filePath);
     } catch (error) {
       await fs.unlink(tempPath).catch(() => undefined);

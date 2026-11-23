@@ -7,7 +7,13 @@ import type {
 export const NOTES_WINDOW_EDGE_MARGIN = 20;
 export const NOTES_WINDOW_NUDGE_STEP = 40;
 
-const ANCHORS: DesktopNotesAnchor[] = ['top-left', 'top-right', 'bottom-left', 'bottom-right', 'center'];
+const ANCHORS: DesktopNotesAnchor[] = [
+  'top-left',
+  'top-right',
+  'bottom-left',
+  'bottom-right',
+  'center',
+];
 
 const ANCHOR_LABELS: Record<DesktopNotesAnchor, string> = {
   'top-left': '左上',
@@ -35,8 +41,14 @@ export function placeNotesWindow(
   const height = clamp(size.height, 240, Math.max(240, workArea.height));
   const maxX = workArea.x + Math.max(0, workArea.width - width);
   const maxY = workArea.y + Math.max(0, workArea.height - height);
-  const marginX = Math.min(NOTES_WINDOW_EDGE_MARGIN, Math.max(0, workArea.width - width));
-  const marginY = Math.min(NOTES_WINDOW_EDGE_MARGIN, Math.max(0, workArea.height - height));
+  const marginX = Math.min(
+    NOTES_WINDOW_EDGE_MARGIN,
+    Math.max(0, workArea.width - width),
+  );
+  const marginY = Math.min(
+    NOTES_WINDOW_EDGE_MARGIN,
+    Math.max(0, workArea.height - height),
+  );
 
   if (anchor === 'center') {
     return {
@@ -89,16 +101,27 @@ export function matchNotesWindowAnchor(
 ): DesktopNotesAnchor | undefined {
   return ANCHORS.find((anchor) => {
     const placed = placeNotesWindow(anchor, bounds, workArea);
-    return Math.abs(placed.x - bounds.x) <= 8 && Math.abs(placed.y - bounds.y) <= 8;
+    return (
+      Math.abs(placed.x - bounds.x) <= 8 && Math.abs(placed.y - bounds.y) <= 8
+    );
   });
 }
 
 /** 把当前窗口位置说成相对屏幕的距离，而不是原始坐标。 */
-export function describeNotesWindow(bounds: DesktopNotesWindowBounds, workArea: DesktopNotesWorkArea) {
+export function describeNotesWindow(
+  bounds: DesktopNotesWindowBounds,
+  workArea: DesktopNotesWorkArea,
+) {
   const left = Math.max(0, Math.round(bounds.x - workArea.x));
   const top = Math.max(0, Math.round(bounds.y - workArea.y));
-  const right = Math.max(0, Math.round(workArea.x + workArea.width - (bounds.x + bounds.width)));
-  const bottom = Math.max(0, Math.round(workArea.y + workArea.height - (bounds.y + bounds.height)));
+  const right = Math.max(
+    0,
+    Math.round(workArea.x + workArea.width - (bounds.x + bounds.width)),
+  );
+  const bottom = Math.max(
+    0,
+    Math.round(workArea.y + workArea.height - (bounds.y + bounds.height)),
+  );
   const anchor = matchNotesWindowAnchor(bounds, workArea);
 
   if (anchor === 'center') {

@@ -1,14 +1,14 @@
+import { shell } from 'electron';
+import { execFile } from 'node:child_process';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { shell } from 'electron';
-import { calculateDirectorySize } from './size-service';
 import type {
   PackageCacheCleanResult,
   PackageCacheItem,
   PackageManagerName,
 } from '../../shared/developer-tools-types';
+import { calculateDirectorySize } from './size-service';
 
 const execFileAsync = promisify(execFile);
 
@@ -47,7 +47,10 @@ const PACKAGE_MANAGER_DEFINITIONS: PackageManagerDefinition[] = [
   },
 ];
 
-function createCommandInvocation([commandName, ...args]: [string, ...string[]]): CommandInvocation {
+function createCommandInvocation([commandName, ...args]: [
+  string,
+  ...string[],
+]): CommandInvocation {
   if (process.platform === 'win32') {
     // Windows 的 .cmd 文件不能由 execFile 直接启动，需要通过系统命令解释器执行。
     return {
@@ -66,7 +69,10 @@ function normalizeCommandOutput(output: string) {
     .find(Boolean);
 }
 
-function createUnavailableItem(definition: PackageManagerDefinition, error: unknown): PackageCacheItem {
+function createUnavailableItem(
+  definition: PackageManagerDefinition,
+  error: unknown,
+): PackageCacheItem {
   return {
     manager: definition.manager,
     label: definition.label,
@@ -87,21 +93,33 @@ async function pathExists(targetPath: string) {
 
 export class PackageCacheService {
   async scanCaches(): Promise<PackageCacheItem[]> {
-    return Promise.all(PACKAGE_MANAGER_DEFINITIONS.map((definition) => this.scanCache(definition)));
+    return Promise.all(
+      PACKAGE_MANAGER_DEFINITIONS.map((definition) =>
+        this.scanCache(definition),
+      ),
+    );
   }
 
-  async cleanCache(manager: PackageManagerName): Promise<PackageCacheCleanResult> {
-    const definition = PACKAGE_MANAGER_DEFINITIONS.find((item) => item.manager === manager);
+  async cleanCache(
+    manager: PackageManagerName,
+  ): Promise<PackageCacheCleanResult> {
+    const definition = PACKAGE_MANAGER_DEFINITIONS.find(
+      (item) => item.manager === manager,
+    );
     if (!definition) {
       return { manager, success: false, message: '不支持的包管理器' };
     }
 
     try {
       const invocation = createCommandInvocation(definition.cleanCommand);
-      const { stdout, stderr } = await execFileAsync(invocation.file, invocation.args, {
-        timeout: COMMAND_TIMEOUT_MS,
-        windowsHide: true,
-      });
+      const { stdout, stderr } = await execFileAsync(
+        invocation.file,
+        invocation.args,
+        {
+          timeout: COMMAND_TIMEOUT_MS,
+          windowsHide: true,
+        },
+      );
       const output = [stdout, stderr].filter(Boolean).join('\n').trim();
 
       return {
@@ -114,7 +132,10 @@ export class PackageCacheService {
       return {
         manager,
         success: false,
-        message: error instanceof Error ? error.message : `${definition.label} 清理失败`,
+        message:
+          error instanceof Error
+            ? error.message
+            : `${definition.label} 清理失败`,
       };
     }
   }
@@ -124,7 +145,9 @@ export class PackageCacheService {
     return shell.openPath(resolvedPath);
   }
 
-  private async scanCache(definition: PackageManagerDefinition): Promise<PackageCacheItem> {
+  private async scanCache(
+    definition: PackageManagerDefinition,
+  ): Promise<PackageCacheItem> {
     try {
       const invocation = createCommandInvocation(definition.pathCommand);
       const { stdout } = await execFileAsync(invocation.file, invocation.args, {

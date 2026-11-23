@@ -21,7 +21,9 @@ const MAX_DIRECTORY_HISTORY_COUNT = 20;
 
 function normalizeForCompare(targetPath: string) {
   const normalizedPath = path.resolve(targetPath).replace(/[\\/]+$/, '');
-  return process.platform === 'win32' ? normalizedPath.toLowerCase() : normalizedPath;
+  return process.platform === 'win32'
+    ? normalizedPath.toLowerCase()
+    : normalizedPath;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -39,7 +41,9 @@ function sanitizeProtectedProject(project: ProtectedProject): ProtectedProject {
   };
 }
 
-function sanitizeDirectoryHistoryItem(item: DirectoryHistoryItem): DirectoryHistoryItem {
+function sanitizeDirectoryHistoryItem(
+  item: DirectoryHistoryItem,
+): DirectoryHistoryItem {
   const resolvedPath = path.resolve(item.path);
 
   return {
@@ -58,7 +62,9 @@ function sanitizeIgnoredProject(project: IgnoredProject): IgnoredProject {
     id: project.id || randomUUID(),
     name: project.name.trim() || path.basename(resolvedProjectPath),
     projectPath: resolvedProjectPath,
-    nodeModulesPath: project.nodeModulesPath ? path.resolve(project.nodeModulesPath) : undefined,
+    nodeModulesPath: project.nodeModulesPath
+      ? path.resolve(project.nodeModulesPath)
+      : undefined,
     reason: project.reason?.trim(),
     createdAt: project.createdAt || Date.now(),
   };
@@ -94,7 +100,9 @@ function parseConfig(value: unknown): AppConfig {
     return createEmptyConfig();
   }
 
-  const protectedProjects = (Array.isArray(value.protectedProjects) ? value.protectedProjects : [])
+  const protectedProjects = (
+    Array.isArray(value.protectedProjects) ? value.protectedProjects : []
+  )
     .filter((project): project is ProtectedProject => {
       if (!isRecord(project)) {
         return false;
@@ -110,7 +118,9 @@ function parseConfig(value: unknown): AppConfig {
     })
     .map(sanitizeProtectedProject);
 
-  const directoryHistory = (Array.isArray(value.directoryHistory) ? value.directoryHistory : [])
+  const directoryHistory = (
+    Array.isArray(value.directoryHistory) ? value.directoryHistory : []
+  )
     .filter((item): item is DirectoryHistoryItem => {
       if (!isRecord(item)) {
         return false;
@@ -128,7 +138,9 @@ function parseConfig(value: unknown): AppConfig {
     .sort((left, right) => right.lastUsedAt - left.lastUsedAt)
     .slice(0, MAX_DIRECTORY_HISTORY_COUNT);
 
-  const ignoredProjects = (Array.isArray(value.ignoredProjects) ? value.ignoredProjects : [])
+  const ignoredProjects = (
+    Array.isArray(value.ignoredProjects) ? value.ignoredProjects : []
+  )
     .filter((project): project is IgnoredProject => {
       if (!isRecord(project)) {
         return false;
@@ -168,13 +180,18 @@ export class ConfigService {
     }
   }
 
-  async saveProtectedProjects(projects: ProtectedProject[]): Promise<AppConfig> {
+  async saveProtectedProjects(
+    projects: ProtectedProject[],
+  ): Promise<AppConfig> {
     const currentConfig = await this.getConfig();
     const uniqueProjects = new Map<string, ProtectedProject>();
 
     for (const project of projects) {
       const sanitizedProject = sanitizeProtectedProject(project);
-      uniqueProjects.set(normalizeForCompare(sanitizedProject.projectPath), sanitizedProject);
+      uniqueProjects.set(
+        normalizeForCompare(sanitizedProject.projectPath),
+        sanitizedProject,
+      );
     }
 
     const config: AppConfig = {
@@ -188,7 +205,9 @@ export class ConfigService {
     return this.writeConfig(config);
   }
 
-  async saveDirectoryHistory(historyItems: DirectoryHistoryItem[]): Promise<AppConfig> {
+  async saveDirectoryHistory(
+    historyItems: DirectoryHistoryItem[],
+  ): Promise<AppConfig> {
     const currentConfig = await this.getConfig();
     const uniqueItems = new Map<string, DirectoryHistoryItem>();
 
@@ -216,7 +235,10 @@ export class ConfigService {
 
     for (const project of projects) {
       const sanitizedProject = sanitizeIgnoredProject(project);
-      uniqueProjects.set(normalizeForCompare(sanitizedProject.projectPath), sanitizedProject);
+      uniqueProjects.set(
+        normalizeForCompare(sanitizedProject.projectPath),
+        sanitizedProject,
+      );
     }
 
     const config: AppConfig = {
@@ -231,7 +253,9 @@ export class ConfigService {
   }
 
   /** 读取最新运行设置再合并字段，避免便签窗口与系统设置互相覆盖。 */
-  async saveRuntime(runtime: Partial<AppRuntimePreferences>): Promise<AppConfig> {
+  async saveRuntime(
+    runtime: Partial<AppRuntimePreferences>,
+  ): Promise<AppConfig> {
     const currentConfig = await this.getConfig();
     return this.writeConfig({
       ...currentConfig,
@@ -239,7 +263,9 @@ export class ConfigService {
     });
   }
 
-  async saveCalendarSettings(settings: DesktopCalendarSettings): Promise<AppConfig> {
+  async saveCalendarSettings(
+    settings: DesktopCalendarSettings,
+  ): Promise<AppConfig> {
     const currentConfig = await this.getConfig();
     return this.writeConfig({
       ...currentConfig,
@@ -252,7 +278,10 @@ export class ConfigService {
     const tempPath = `${this.configPath}.${randomUUID()}.tmp`;
     try {
       // 同目录替换，写入失败时保留原配置文件。
-      await fs.writeFile(tempPath, JSON.stringify(config, null, 2), { encoding: 'utf8', flag: 'wx' });
+      await fs.writeFile(tempPath, JSON.stringify(config, null, 2), {
+        encoding: 'utf8',
+        flag: 'wx',
+      });
       await fs.rename(tempPath, this.configPath);
     } catch (error) {
       await fs.unlink(tempPath).catch(() => undefined);
@@ -292,7 +321,9 @@ export class ConfigService {
 
       return (
         normalizedTargetPath === normalizedProjectPath ||
-        normalizedTargetPath.startsWith(`${normalizedProjectPath}${path.sep}`) ||
+        normalizedTargetPath.startsWith(
+          `${normalizedProjectPath}${path.sep}`,
+        ) ||
         normalizedTargetPath === normalizedNodeModulesPath
       );
     });

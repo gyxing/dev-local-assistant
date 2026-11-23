@@ -1,5 +1,5 @@
-import { randomUUID } from 'node:crypto';
 import { app, BrowserWindow, ipcMain, screen } from 'electron';
+import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import {
   createEmptyDesktopNotesState,
@@ -14,8 +14,8 @@ import type {
   DesktopNotesContentUpdate,
   DesktopNotesSnapshot,
   DesktopNotesState,
-  DesktopNotesWindowState,
   DesktopNotesWindowBounds,
+  DesktopNotesWindowState,
 } from '../shared/desktop-notes-types';
 import { IPC_CHANNELS } from './ipc/channels';
 import { ConfigService } from './services/config-service';
@@ -81,10 +81,14 @@ export class DesktopNotesController {
     this.canUseDesktopMode = canUseDesktopMode && process.platform === 'win32';
     const config = await this.configService.getConfig();
     this.notesWindowOpen = config.runtime.notesWindowOpen;
-    this.desktopModeSaved = (await this.notesService.loadPersistedState()).settings.desktopMode;
+    this.desktopModeSaved = (
+      await this.notesService.loadPersistedState()
+    ).settings.desktopMode;
     // 显示器被拔掉时把窗口收回主屏
     screen.on('display-removed', () => {
-      void this.runAction(() => this.handleDisplayRemoved()).catch(this.reportError);
+      void this.runAction(() => this.handleDisplayRemoved()).catch(
+        this.reportError,
+      );
     });
 
     if (this.notesWindowOpen) {
@@ -101,8 +105,13 @@ export class DesktopNotesController {
   }
 
   getTrayState() {
-    const windowOpen = Boolean(this.notesWindow && !this.notesWindow.isDestroyed());
-    return { windowOpen, desktopMode: windowOpen ? this.desktopModeActive : this.desktopModeSaved };
+    const windowOpen = Boolean(
+      this.notesWindow && !this.notesWindow.isDestroyed(),
+    );
+    return {
+      windowOpen,
+      desktopMode: windowOpen ? this.desktopModeActive : this.desktopModeSaved,
+    };
   }
 
   /** 等待便签草稿保存后进入退出状态，并保留下次启动的窗口偏好。 */
@@ -119,11 +128,17 @@ export class DesktopNotesController {
 
   /** 面板入口可无激活地打开便签，避免打断用户连续操作。 */
   toggleWindow(activate = true) {
-    return this.runAction(() => this.getTrayState().windowOpen ? this.closeNotesWindow() : this.openNotesWindow(activate));
+    return this.runAction(() =>
+      this.getTrayState().windowOpen
+        ? this.closeNotesWindow()
+        : this.openNotesWindow(activate),
+    );
   }
 
   toggleDesktopMode() {
-    return this.runAction(() => this.applyDesktopMode(!this.getTrayState().desktopMode));
+    return this.runAction(() =>
+      this.applyDesktopMode(!this.getTrayState().desktopMode),
+    );
   }
 
   /** 串行执行窗口操作，失败后仍然接受下一次请求。 */
@@ -134,28 +149,50 @@ export class DesktopNotesController {
   }
 
   registerIpc() {
-    ipcMain.handle(IPC_CHANNELS.desktopNotesGetSnapshot, () => this.readSnapshot());
-    ipcMain.handle(IPC_CHANNELS.desktopNotesOpenWindow, () => this.runAction(() => this.openNotesWindow()));
-    ipcMain.handle(IPC_CHANNELS.desktopNotesCloseWindow, () => this.runAction(() => this.closeNotesWindow()));
-    ipcMain.handle(IPC_CHANNELS.desktopNotesRefresh, () => this.runAction(() => this.refresh()));
-    ipcMain.handle(IPC_CHANNELS.desktopNotesLoadState, async (): Promise<DesktopNotesWindowState> => ({
-      state: await this.notesService.loadState(),
-      desktopModeActive: this.desktopModeActive,
-    }));
-    ipcMain.handle(IPC_CHANNELS.desktopNotesSetDesktopMode, (_, enabled: unknown) => {
-      if (typeof enabled !== 'boolean') {
-        throw new TypeError('桌面模式必须为布尔值');
-      }
-      return this.runAction(() => this.applyDesktopMode(enabled));
-    });
-    ipcMain.handle(IPC_CHANNELS.desktopNotesSaveState, (event, state: DesktopNotesState) =>
-      this.saveFromNotesWindow(event.sender.id, state),
+    ipcMain.handle(IPC_CHANNELS.desktopNotesGetSnapshot, () =>
+      this.readSnapshot(),
     );
-    ipcMain.handle(IPC_CHANNELS.desktopNotesUpdateContent, (event, update: DesktopNotesContentUpdate) =>
-      this.runAction(() => this.updateContent(event.sender.id, update)),
+    ipcMain.handle(IPC_CHANNELS.desktopNotesOpenWindow, () =>
+      this.runAction(() => this.openNotesWindow()),
     );
-    ipcMain.handle(IPC_CHANNELS.desktopNotesHighlightBounds, () => this.highlightNotesBounds());
-    ipcMain.handle(IPC_CHANNELS.desktopNotesTakeBoundsHighlight, () => this.takePendingBoundsHighlight());
+    ipcMain.handle(IPC_CHANNELS.desktopNotesCloseWindow, () =>
+      this.runAction(() => this.closeNotesWindow()),
+    );
+    ipcMain.handle(IPC_CHANNELS.desktopNotesRefresh, () =>
+      this.runAction(() => this.refresh()),
+    );
+    ipcMain.handle(
+      IPC_CHANNELS.desktopNotesLoadState,
+      async (): Promise<DesktopNotesWindowState> => ({
+        state: await this.notesService.loadState(),
+        desktopModeActive: this.desktopModeActive,
+      }),
+    );
+    ipcMain.handle(
+      IPC_CHANNELS.desktopNotesSetDesktopMode,
+      (_, enabled: unknown) => {
+        if (typeof enabled !== 'boolean') {
+          throw new TypeError('桌面模式必须为布尔值');
+        }
+        return this.runAction(() => this.applyDesktopMode(enabled));
+      },
+    );
+    ipcMain.handle(
+      IPC_CHANNELS.desktopNotesSaveState,
+      (event, state: DesktopNotesState) =>
+        this.saveFromNotesWindow(event.sender.id, state),
+    );
+    ipcMain.handle(
+      IPC_CHANNELS.desktopNotesUpdateContent,
+      (event, update: DesktopNotesContentUpdate) =>
+        this.runAction(() => this.updateContent(event.sender.id, update)),
+    );
+    ipcMain.handle(IPC_CHANNELS.desktopNotesHighlightBounds, () =>
+      this.highlightNotesBounds(),
+    );
+    ipcMain.handle(IPC_CHANNELS.desktopNotesTakeBoundsHighlight, () =>
+      this.takePendingBoundsHighlight(),
+    );
   }
 
   /** 让便利贴窗口闪烁提示自身范围；窗口未打开时前端已禁用入口，这里只兜底 */
@@ -177,7 +214,10 @@ export class DesktopNotesController {
     }
 
     this.pendingBoundsHighlight = true;
-    target.webContents.send(IPC_CHANNELS.desktopNotesBoundsHighlight, DESKTOP_NOTES_HIGHLIGHT_DURATION_MS);
+    target.webContents.send(
+      IPC_CHANNELS.desktopNotesBoundsHighlight,
+      DESKTOP_NOTES_HIGHLIGHT_DURATION_MS,
+    );
     return this.readSnapshot();
   }
 
@@ -186,7 +226,11 @@ export class DesktopNotesController {
     this.clearHighlightRestore();
     this.highlightRestoreTimer = setTimeout(() => {
       this.highlightRestoreTimer = undefined;
-      if (target === this.notesWindow && !target.isDestroyed() && !this.desktopModeActive) {
+      if (
+        target === this.notesWindow &&
+        !target.isDestroyed() &&
+        !this.desktopModeActive
+      ) {
         target.setAlwaysOnTop(false);
       }
     }, DESKTOP_NOTES_HIGHLIGHT_DURATION_MS);
@@ -217,7 +261,10 @@ export class DesktopNotesController {
       return this.notifyStateChanged();
     }
 
-    if (enabled === this.desktopModeActive && enabled === this.desktopModeSaved) {
+    if (
+      enabled === this.desktopModeActive &&
+      enabled === this.desktopModeSaved
+    ) {
       return this.readSnapshot();
     }
 
@@ -237,10 +284,13 @@ export class DesktopNotesController {
             }
             await sendWindowToBottom(target);
             await this.saveDesktopMode(true);
-            this.desktopModeActive = target === this.notesWindow && !target.isDestroyed();
+            this.desktopModeActive =
+              target === this.notesWindow && !target.isDestroyed();
           } catch (error) {
             this.restoreInteraction(target);
-            throw new Error('无法启用便利贴桌面模式，已恢复交互', { cause: error });
+            throw new Error('无法启用便利贴桌面模式，已恢复交互', {
+              cause: error,
+            });
           }
         } else {
           this.restoreInteraction(target);
@@ -248,7 +298,10 @@ export class DesktopNotesController {
           try {
             await this.saveDesktopMode(false);
           } catch (error) {
-            throw new Error('已恢复交互，桌面模式偏好未保存，重启后可能重新启用', { cause: error });
+            throw new Error(
+              '已恢复交互，桌面模式偏好未保存，重启后可能重新启用',
+              { cause: error },
+            );
           }
         }
       } finally {
@@ -293,8 +346,11 @@ export class DesktopNotesController {
 
     const state = await this.notesService.loadState();
     const bounds = this.boundsFromState(state);
-    this.desktopModeActive = this.canUseDesktopMode && state.settings.desktopMode;
-    const initialBounds = this.shouldCompact(state) ? this.compactBounds(bounds) : bounds;
+    this.desktopModeActive =
+      this.canUseDesktopMode && state.settings.desktopMode;
+    const initialBounds = this.shouldCompact(state)
+      ? this.compactBounds(bounds)
+      : bounds;
 
     const notesWindow = new BrowserWindow({
       width: initialBounds.width,
@@ -325,7 +381,9 @@ export class DesktopNotesController {
     notesWindow.on('close', (event) => {
       if (!this.quitting) {
         event.preventDefault();
-        void this.runAction(() => this.closeNotesWindow()).catch(this.reportError);
+        void this.runAction(() => this.closeNotesWindow()).catch(
+          this.reportError,
+        );
       }
     });
     notesWindow.on('closed', () => {
@@ -347,7 +405,10 @@ export class DesktopNotesController {
           await sendWindowToBottom(notesWindow);
         } catch (error) {
           this.restoreInteraction(notesWindow, activate);
-          const failure = new Error('打开时无法置底便利贴，本次以交互模式显示', { cause: error });
+          const failure = new Error(
+            '打开时无法置底便利贴，本次以交互模式显示',
+            { cause: error },
+          );
           if (activate) {
             this.reportError(failure);
           } else {
@@ -382,7 +443,9 @@ export class DesktopNotesController {
   }
 
   /** 在管理操作期间暂停窗口编辑，避免旧快照覆盖刚保存的内容。 */
-  private async withFlushedWindow<T>(action: (target?: BrowserWindow) => Promise<T>): Promise<T> {
+  private async withFlushedWindow<T>(
+    action: (target?: BrowserWindow) => Promise<T>,
+  ): Promise<T> {
     const target = this.notesWindow;
     if (!target || target.isDestroyed() || this.desktopModeActive) {
       return action(target?.isDestroyed() ? undefined : target);
@@ -405,7 +468,10 @@ export class DesktopNotesController {
     return new Promise<void>((resolve, reject) => {
       const cleanup = () => {
         clearTimeout(timer);
-        ipcMain.removeListener(IPC_CHANNELS.desktopNotesFlushResult, handleResult);
+        ipcMain.removeListener(
+          IPC_CHANNELS.desktopNotesFlushResult,
+          handleResult,
+        );
       };
       const timer = setTimeout(() => {
         cleanup();
@@ -423,7 +489,10 @@ export class DesktopNotesController {
           reject(new Error('便利贴尚未准备好保存，请重试'));
           return;
         }
-        void this.saveRendererContent(payload.state).then(() => resolve(), reject);
+        void this.saveRendererContent(payload.state).then(
+          () => resolve(),
+          reject,
+        );
       };
 
       ipcMain.on(IPC_CHANNELS.desktopNotesFlushResult, handleResult);
@@ -431,8 +500,16 @@ export class DesktopNotesController {
     });
   }
 
-  private async saveFromNotesWindow(senderId: number, state: DesktopNotesState) {
-    if (!this.notesWindow || this.notesWindow.isDestroyed() || this.notesWindow.webContents.id !== senderId || this.desktopModeActive) {
+  private async saveFromNotesWindow(
+    senderId: number,
+    state: DesktopNotesState,
+  ) {
+    if (
+      !this.notesWindow ||
+      this.notesWindow.isDestroyed() ||
+      this.notesWindow.webContents.id !== senderId ||
+      this.desktopModeActive
+    ) {
       return this.notesService.loadState();
     }
 
@@ -447,7 +524,10 @@ export class DesktopNotesController {
       ...current,
       notes: state.notes,
       // 窗口不回写管理页维护的屏幕范围和主进程维护的模式。
-      settings: { ...state.settings, desktopMode: current.settings.desktopMode },
+      settings: {
+        ...state.settings,
+        desktopMode: current.settings.desktopMode,
+      },
     }));
   }
 
@@ -460,19 +540,31 @@ export class DesktopNotesController {
     this.notesWindowOpen = open;
   }
 
-  private async updateContent(senderId: number, update: DesktopNotesContentUpdate) {
-    const notesWindowId = this.notesWindow && !this.notesWindow.isDestroyed() ? this.notesWindow.webContents.id : undefined;
+  private async updateContent(
+    senderId: number,
+    update: DesktopNotesContentUpdate,
+  ) {
+    const notesWindowId =
+      this.notesWindow && !this.notesWindow.isDestroyed()
+        ? this.notesWindow.webContents.id
+        : undefined;
     if (senderId === notesWindowId) {
       return this.readSnapshot();
     }
 
     return this.withFlushedWindow(async () => {
-      await this.notesService.updateState((current) => this.applyContentUpdate(current, update), createEmptyDesktopNotesState);
+      await this.notesService.updateState(
+        (current) => this.applyContentUpdate(current, update),
+        createEmptyDesktopNotesState,
+      );
       return this.refreshWindowState();
     });
   }
 
-  private applyContentUpdate(current: DesktopNotesState, update: DesktopNotesContentUpdate): DesktopNotesState {
+  private applyContentUpdate(
+    current: DesktopNotesState,
+    update: DesktopNotesContentUpdate,
+  ): DesktopNotesState {
     const notes = current.notes.flatMap((note) => {
       if (update.deleteNoteId === note.id) {
         return [];
@@ -491,15 +583,21 @@ export class DesktopNotesController {
 
       return [note];
     });
-    const displayChanged = Boolean(update.displayId) && update.displayId !== current.displayId;
+    const displayChanged =
+      Boolean(update.displayId) && update.displayId !== current.displayId;
     const nextDisplayId = update.displayId ?? current.displayId;
     let nextBounds = update.windowBounds
-      ? normalizeDesktopNotesWindowBounds(update.windowBounds) ?? current.windowBounds
+      ? (normalizeDesktopNotesWindowBounds(update.windowBounds) ??
+        current.windowBounds)
       : current.windowBounds;
 
     if (displayChanged) {
       // 换显示器后放到新屏右下角，避免沿用旧屏的坐标
-      nextBounds = this.defaultBoundsForDisplay(nextDisplayId, nextBounds?.width, nextBounds?.height);
+      nextBounds = this.defaultBoundsForDisplay(
+        nextDisplayId,
+        nextBounds?.width,
+        nextBounds?.height,
+      );
     }
 
     return {
@@ -507,7 +605,11 @@ export class DesktopNotesController {
       notes,
       displayId: nextDisplayId,
       settings: update.settings
-        ? normalizeDesktopNoteSettings({ ...current.settings, ...update.settings, desktopMode: current.settings.desktopMode })
+        ? normalizeDesktopNoteSettings({
+            ...current.settings,
+            ...update.settings,
+            desktopMode: current.settings.desktopMode,
+          })
         : current.settings,
       windowBounds: nextBounds,
     };
@@ -520,13 +622,21 @@ export class DesktopNotesController {
       return snapshot;
     }
 
-    const state: DesktopNotesWindowState = { state: snapshot.state, desktopModeActive: snapshot.desktopModeActive };
-    this.notesWindow.webContents.send(IPC_CHANNELS.desktopNotesApplyState, state);
+    const state: DesktopNotesWindowState = {
+      state: snapshot.state,
+      desktopModeActive: snapshot.desktopModeActive,
+    };
+    this.notesWindow.webContents.send(
+      IPC_CHANNELS.desktopNotesApplyState,
+      state,
+    );
     return snapshot;
   }
 
   /** 空状态下的窗口范围：右下角锚点不动，收成刚好包住新建按钮的小方块 */
-  private compactBounds(normal: DesktopNotesWindowBounds): DesktopNotesWindowBounds {
+  private compactBounds(
+    normal: DesktopNotesWindowBounds,
+  ): DesktopNotesWindowBounds {
     const size = DESKTOP_NOTES_COMPACT_SIZE;
     return {
       width: size,
@@ -546,7 +656,9 @@ export class DesktopNotesController {
     }
 
     const bounds = this.boundsFromState(state);
-    this.notesWindow.setBounds(this.shouldCompact(state) ? this.compactBounds(bounds) : bounds);
+    this.notesWindow.setBounds(
+      this.shouldCompact(state) ? this.compactBounds(bounds) : bounds,
+    );
   }
 
   private boundsFromState(state: DesktopNotesState): DesktopNotesWindowBounds {
@@ -569,7 +681,9 @@ export class DesktopNotesController {
       width,
       height,
       x: workArea.x + Math.max(0, workArea.width - width - NOTES_WINDOW_MARGIN),
-      y: workArea.y + Math.max(0, workArea.height - height - NOTES_WINDOW_MARGIN),
+      y:
+        workArea.y +
+        Math.max(0, workArea.height - height - NOTES_WINDOW_MARGIN),
     };
   }
 
@@ -581,7 +695,11 @@ export class DesktopNotesController {
     }
 
     const primaryId = getPrimaryDisplayId();
-    const bounds = this.defaultBoundsForDisplay(primaryId, state.windowBounds?.width, state.windowBounds?.height);
+    const bounds = this.defaultBoundsForDisplay(
+      primaryId,
+      state.windowBounds?.width,
+      state.windowBounds?.height,
+    );
     await this.notesService.updateState((current) => ({
       ...current,
       displayId: primaryId,
@@ -595,7 +713,9 @@ export class DesktopNotesController {
 
   private async readSnapshot(): Promise<DesktopNotesSnapshot> {
     const cache = await this.notesService.getCacheInfo();
-    const state = cache.exists ? await this.notesService.loadState() : createEmptyDesktopNotesState();
+    const state = cache.exists
+      ? await this.notesService.loadState()
+      : createEmptyDesktopNotesState();
     const display = getDisplayInfo(state.displayId);
 
     return {
@@ -622,17 +742,23 @@ export class DesktopNotesController {
       return;
     }
 
-    this.mainWindow.webContents.send(IPC_CHANNELS.desktopNotesSnapshot, snapshot);
+    this.mainWindow.webContents.send(
+      IPC_CHANNELS.desktopNotesSnapshot,
+      snapshot,
+    );
   }
 
   private async loadNotesRenderer(notesWindow: BrowserWindow) {
     if (process.env.NODE_ENV === 'development') {
-      const devServerUrl = process.env.DEV_SERVER_URL ?? 'http://127.0.0.1:8137';
+      const devServerUrl =
+        process.env.DEV_SERVER_URL ?? 'http://127.0.0.1:8137';
       await notesWindow.loadURL(`${devServerUrl}/#/desktop-notes`);
       return;
     }
 
-    await notesWindow.loadFile(this.getRendererEntry(), { hash: '/desktop-notes' });
+    await notesWindow.loadFile(this.getRendererEntry(), {
+      hash: '/desktop-notes',
+    });
   }
 }
 

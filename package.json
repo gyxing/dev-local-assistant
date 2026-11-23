@@ -1,18 +1,16 @@
 {
   "name": "devbox",
-  "productName": "本地助手",
   "version": "1.0.5",
-  "description": "面向开发者的本地效率工具集",
   "private": true,
-  "packageManager": "pnpm@11.10.0",
+  "description": "面向开发者的本地效率工具集",
   "main": "dist-electron/electron/main.js",
   "scripts": {
-    "dev": "node scripts/dev.js",
-    "dev:web": "max dev",
-    "build:web": "max build",
-    "build:electron": "tsc -p tsconfig.electron.json",
-    "dev:electron": "tsc -p tsconfig.electron.json && cross-env NODE_ENV=development DEV_SERVER_URL=http://127.0.0.1:8137 electron .",
     "build": "max build && tsc -p tsconfig.electron.json",
+    "build:electron": "tsc -p tsconfig.electron.json",
+    "build:web": "max build",
+    "dev": "node scripts/dev.js",
+    "dev:electron": "tsc -p tsconfig.electron.json && cross-env NODE_ENV=development DEV_SERVER_URL=http://127.0.0.1:8137 electron .",
+    "dev:web": "max dev",
     "package:win": "pnpm run build && electron-builder --win nsis --x64"
   },
   "devDependencies": {
@@ -27,9 +25,14 @@
     "electron": "^45.3.3",
     "electron-builder": "^26.15.3",
     "lunar-javascript": "^1.7.8",
+    "prettier": "^3.2.5",
+    "prettier-plugin-organize-imports": "^3.2.4",
+    "prettier-plugin-packagejson": "^2.5.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "typescript": "^5.9.3",
     "wait-on": "^8.0.5"
-  }
+  },
+  "packageManager": "pnpm@11.10.0",
+  "productName": "本地助手"
 }

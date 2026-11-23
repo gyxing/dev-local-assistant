@@ -1,5 +1,3 @@
-import path from 'node:path';
-import { pathToFileURL } from 'node:url';
 import {
   app,
   BrowserWindow,
@@ -14,6 +12,8 @@ import {
   type NativeImage,
   type Rectangle,
 } from 'electron';
+import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import type { CalendarTimeInfo } from '../shared/desktop-calendar-types';
 import type { DesktopNotesSnapshot } from '../shared/desktop-notes-types';
 import {
@@ -73,15 +73,19 @@ interface TrayControllerOptions {
 /** 计算托盘旁的面板位置，返回处于对应显示器工作区内的窗口范围。 */
 function resolvePanelBounds(trayBounds: Rectangle): Rectangle {
   const { x: cursorX, y: cursorY } = screen.getCursorScreenPoint();
-  const anchor = trayBounds.width > 0 && trayBounds.height > 0
-    ? trayBounds
-    : { x: cursorX, y: cursorY, width: 1, height: 1 };
+  const anchor =
+    trayBounds.width > 0 && trayBounds.height > 0
+      ? trayBounds
+      : { x: cursorX, y: cursorY, width: 1, height: 1 };
   const area = screen.getDisplayMatching(anchor).workArea;
   const width = Math.min(PANEL_WIDTH, area.width);
   const height = Math.min(PANEL_HEIGHT, area.height);
   const right = area.x + area.width;
   const bottom = area.y + area.height;
-  const x = Math.min(Math.max(anchor.x + anchor.width - width, area.x), right - width);
+  const x = Math.min(
+    Math.max(anchor.x + anchor.width - width, area.x),
+    right - width,
+  );
   const above = Math.min(anchor.y - PANEL_GAP, bottom) - height;
   const below = Math.max(anchor.y + anchor.height + PANEL_GAP, area.y);
   const y = above >= area.y ? above : Math.min(below, bottom - height);
@@ -154,16 +158,26 @@ export class TrayController {
       this.tray.setContextMenu(this.createNativeMenu());
     }
     if (this.panelReady && this.panel && !this.panel.isDestroyed()) {
-      this.panel.webContents.send(IPC_CHANNELS.trayPanelStateChanged, this.readState());
+      this.panel.webContents.send(
+        IPC_CHANNELS.trayPanelStateChanged,
+        this.readState(),
+      );
     }
   }
 
-  private canRun(action: TrayPanelAction, notes = this.options.getNotesState()) {
-    return this.ready
-      && !this.disposed
-      && !this.pending.has('quit')
-      && !Array.from(this.pending).some((item) => ACTION_GROUP[item] === ACTION_GROUP[action])
-      && (action !== 'highlight-notes' || notes.windowOpen);
+  private canRun(
+    action: TrayPanelAction,
+    notes = this.options.getNotesState(),
+  ) {
+    return (
+      this.ready &&
+      !this.disposed &&
+      !this.pending.has('quit') &&
+      !Array.from(this.pending).some(
+        (item) => ACTION_GROUP[item] === ACTION_GROUP[action],
+      ) &&
+      (action !== 'highlight-notes' || notes.windowOpen)
+    );
   }
 
   private readState(): TrayPanelState {
@@ -174,7 +188,9 @@ export class TrayController {
       notes,
       calendar: this.options.getCalendarState(),
       pending: Array.from(this.pending),
-      disabled: TRAY_PANEL_ACTIONS.filter((action) => !this.canRun(action, notes)),
+      disabled: TRAY_PANEL_ACTIONS.filter(
+        (action) => !this.canRun(action, notes),
+      ),
     };
   }
 
@@ -186,7 +202,9 @@ export class TrayController {
       state: { checked?: boolean; icon?: NativeImage } = {},
     ): MenuItemConstructorOptions => ({
       label,
-      ...(state.checked === undefined ? {} : { type: 'checkbox', checked: state.checked }),
+      ...(state.checked === undefined
+        ? {}
+        : { type: 'checkbox', checked: state.checked }),
       icon: state.icon,
       enabled: !disabled.includes(id),
       click: () => void this.runAction(id, false),
@@ -199,16 +217,24 @@ export class TrayController {
         icon: this.menuIcons.notes,
         submenu: [
           action('toggle-notes', '显示便利贴', { checked: notes.windowOpen }),
-          action('toggle-notes-mode', '桌面模式', { checked: notes.desktopMode }),
-          action('highlight-notes', '检测范围', { icon: this.menuIcons.bounds }),
+          action('toggle-notes-mode', '桌面模式', {
+            checked: notes.desktopMode,
+          }),
+          action('highlight-notes', '检测范围', {
+            icon: this.menuIcons.bounds,
+          }),
         ],
       },
       {
         label: '桌面日历',
         icon: this.menuIcons.calendar,
         submenu: [
-          action('toggle-calendar', '显示日历', { checked: calendar.windowOpen }),
-          action('toggle-calendar-theme', '深色主题', { checked: calendar.darkTheme }),
+          action('toggle-calendar', '显示日历', {
+            checked: calendar.windowOpen,
+          }),
+          action('toggle-calendar-theme', '深色主题', {
+            checked: calendar.darkTheme,
+          }),
           action('sync-time', '立即校时', { icon: this.menuIcons.clock }),
         ],
       },
@@ -232,10 +258,13 @@ export class TrayController {
 
   private assertPanelSender(event: IpcMainInvokeEvent) {
     const contents = this.panel?.webContents;
-    if (!contents || contents.isDestroyed()
-      || event.sender !== contents
-      || event.senderFrame !== contents.mainFrame
-      || event.senderFrame.url !== this.panelUrl) {
+    if (
+      !contents ||
+      contents.isDestroyed() ||
+      event.sender !== contents ||
+      event.senderFrame !== contents.mainFrame ||
+      event.senderFrame.url !== this.panelUrl
+    ) {
       throw new Error('仅托盘面板可使用此操作');
     }
   }
@@ -250,12 +279,17 @@ export class TrayController {
       this.resolvePanelReady?.();
       return this.readState();
     });
-    ipcMain.handle(IPC_CHANNELS.trayPanelRunAction, (event, action: unknown) => {
-      this.assertPanelSender(event);
-      const allowedAction = TRAY_PANEL_ACTIONS.find((allowed) => allowed === action);
-      if (!allowedAction) throw new Error('不支持的托盘操作');
-      return this.runAction(allowedAction, true);
-    });
+    ipcMain.handle(
+      IPC_CHANNELS.trayPanelRunAction,
+      (event, action: unknown) => {
+        this.assertPanelSender(event);
+        const allowedAction = TRAY_PANEL_ACTIONS.find(
+          (allowed) => allowed === action,
+        );
+        if (!allowedAction) throw new Error('不支持的托盘操作');
+        return this.runAction(allowedAction, true);
+      },
+    );
   }
 
   private openPanel(bounds: Rectangle) {
@@ -282,15 +316,20 @@ export class TrayController {
           this.showNativeMenu(fallbackBounds);
         }
       })
-      .finally(() => { this.panelLoad = undefined; });
+      .finally(() => {
+        this.panelLoad = undefined;
+      });
   }
 
   private async loadPanel() {
-    const devServerUrl = process.env.NODE_ENV === 'development'
-      ? process.env.DEV_SERVER_URL ?? 'http://127.0.0.1:8137'
-      : undefined;
+    const devServerUrl =
+      process.env.NODE_ENV === 'development'
+        ? (process.env.DEV_SERVER_URL ?? 'http://127.0.0.1:8137')
+        : undefined;
     const rendererEntry = this.options.getRendererEntry();
-    const url = devServerUrl ? new URL(devServerUrl) : pathToFileURL(rendererEntry);
+    const url = devServerUrl
+      ? new URL(devServerUrl)
+      : pathToFileURL(rendererEntry);
     url.hash = PANEL_ROUTE;
     this.panelUrl = url.href;
     const panel = new BrowserWindow({
@@ -337,11 +376,16 @@ export class TrayController {
     let timer: NodeJS.Timeout | undefined;
     const ready = new Promise<void>((resolve, reject) => {
       this.resolvePanelReady = resolve;
-      timer = setTimeout(() => reject(new Error('托盘面板加载超时')), PANEL_LOAD_TIMEOUT_MS);
+      timer = setTimeout(
+        () => reject(new Error('托盘面板加载超时')),
+        PANEL_LOAD_TIMEOUT_MS,
+      );
       panel.once('closed', () => reject(new Error('托盘面板在加载时关闭')));
     });
     try {
-      const load = devServerUrl ? panel.loadURL(url.href) : panel.loadFile(rendererEntry, { hash: PANEL_ROUTE });
+      const load = devServerUrl
+        ? panel.loadURL(url.href)
+        : panel.loadFile(rendererEntry, { hash: PANEL_ROUTE });
       await Promise.all([load, ready]);
       this.panelReady = true;
     } finally {
@@ -387,15 +431,26 @@ export class TrayController {
   }
 
   private showNativeMenu(bounds: Rectangle) {
-    const position = bounds.width > 0 && bounds.height > 0
-      ? { x: Math.round(bounds.x + bounds.width / 2), y: Math.round(bounds.y + bounds.height / 2) }
-      : screen.getCursorScreenPoint();
+    const position =
+      bounds.width > 0 && bounds.height > 0
+        ? {
+            x: Math.round(bounds.x + bounds.width / 2),
+            y: Math.round(bounds.y + bounds.height / 2),
+          }
+        : screen.getCursorScreenPoint();
     this.tray.popUpContextMenu(this.createNativeMenu(), position);
   }
 
-  private async runAction(action: TrayPanelAction, fromPanel: boolean): Promise<TrayPanelResult> {
+  private async runAction(
+    action: TrayPanelAction,
+    fromPanel: boolean,
+  ): Promise<TrayPanelResult> {
     if (!this.canRun(action)) {
-      return { ok: false, message: '当前无法执行此操作，请稍后重试。', state: this.readState() };
+      return {
+        ok: false,
+        message: '当前无法执行此操作，请稍后重试。',
+        state: this.readState(),
+      };
     }
     this.pending.add(action);
     this.refresh();
@@ -418,7 +473,10 @@ export class TrayController {
     return { ok, message, state: this.readState() };
   }
 
-  private async performAction(action: TrayPanelAction, fromPanel: boolean): Promise<string | undefined> {
+  private async performAction(
+    action: TrayPanelAction,
+    fromPanel: boolean,
+  ): Promise<string | undefined> {
     switch (action) {
       case 'open-main':
         this.hidePanel();
@@ -426,7 +484,12 @@ export class TrayController {
         return;
       case 'toggle-notes': {
         const snapshot = await this.options.toggleNotesWindow(!fromPanel);
-        if (fromPanel && snapshot.windowOpen && snapshot.state.settings.desktopMode && !snapshot.desktopModeActive) {
+        if (
+          fromPanel &&
+          snapshot.windowOpen &&
+          snapshot.state.settings.desktopMode &&
+          !snapshot.desktopModeActive
+        ) {
           return '便利贴未能置底，已用交互模式打开。';
         }
         return;
@@ -444,7 +507,8 @@ export class TrayController {
         await this.options.toggleCalendarTheme();
         return;
       case 'sync-time': {
-        if ((await this.options.syncCalendarTime()).source !== 'local') return '已按网络时间校准。';
+        if ((await this.options.syncCalendarTime()).source !== 'local')
+          return '已按网络时间校准。';
 
         const message = '网络校时失败，继续使用本机时间。';
         if (!fromPanel) throw new Error(message);

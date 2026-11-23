@@ -1,5 +1,5 @@
-import fs from 'node:fs/promises';
 import type { Dirent } from 'node:fs';
+import fs from 'node:fs/promises';
 import path from 'node:path';
 
 export interface SizeSummary {
@@ -7,7 +7,9 @@ export interface SizeSummary {
   fileCount: number;
 }
 
-export async function calculateDirectorySize(rootPath: string): Promise<SizeSummary> {
+export async function calculateDirectorySize(
+  rootPath: string,
+): Promise<SizeSummary> {
   let sizeBytes = 0;
   let fileCount = 0;
   const pendingDirs = [rootPath];

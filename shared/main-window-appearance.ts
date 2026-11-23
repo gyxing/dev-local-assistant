@@ -11,7 +11,10 @@ export const MAIN_WINDOW_COLORS = {
 } as const;
 
 /** 手动主题优先，跟随系统时读取 Windows 的应用配色。 */
-export function resolveMainWindowScheme(preference: MainWindowTheme, systemDark: boolean): MainWindowColorScheme {
+export function resolveMainWindowScheme(
+  preference: MainWindowTheme,
+  systemDark: boolean,
+): MainWindowColorScheme {
   return preference === 'system' ? (systemDark ? 'dark' : 'light') : preference;
 }
 
@@ -19,6 +22,12 @@ export interface MainWindowMenuGroup {
   label: string;
   items: Array<
     | { id: number; type: 'separator' }
-    | { id: number; type: 'command'; label: string; accelerator: string | null; enabled: boolean }
+    | {
+        id: number;
+        type: 'command';
+        label: string;
+        accelerator: string | null;
+        enabled: boolean;
+      }
   >;
 }

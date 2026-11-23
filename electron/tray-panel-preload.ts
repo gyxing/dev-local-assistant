@@ -10,17 +10,25 @@ const channels = {
   trayPanelStateChanged: 'tray-panel:state-changed',
 } satisfies Pick<
   typeof IPC_CHANNELS,
-  'trayPanelGetState' | 'trayPanelReady' | 'trayPanelRunAction' | 'trayPanelStateChanged'
+  | 'trayPanelGetState'
+  | 'trayPanelReady'
+  | 'trayPanelRunAction'
+  | 'trayPanelStateChanged'
 >;
 
 const panelApi: TrayPanelApi = {
   getState: () => ipcRenderer.invoke(channels.trayPanelGetState),
   ready: () => ipcRenderer.invoke(channels.trayPanelReady),
-  runAction: (action) => ipcRenderer.invoke(channels.trayPanelRunAction, action),
+  runAction: (action) =>
+    ipcRenderer.invoke(channels.trayPanelRunAction, action),
   onStateChanged: (callback) => {
-    const listener = (_event: Electron.IpcRendererEvent, state: TrayPanelState) => callback(state);
+    const listener = (
+      _event: Electron.IpcRendererEvent,
+      state: TrayPanelState,
+    ) => callback(state);
     ipcRenderer.on(channels.trayPanelStateChanged, listener);
-    return () => ipcRenderer.removeListener(channels.trayPanelStateChanged, listener);
+    return () =>
+      ipcRenderer.removeListener(channels.trayPanelStateChanged, listener);
   },
 };
 

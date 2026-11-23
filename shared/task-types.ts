@@ -1,5 +1,5 @@
-import type { DesktopCalendarSettings } from './desktop-calendar-types';
 import type { AppSettingsPreferences } from './app-settings-types';
+import type { DesktopCalendarSettings } from './desktop-calendar-types';
 
 export type NodeModulesSource = 'package-json' | 'orphan-node-modules';
 
@@ -92,7 +92,12 @@ export interface NodeModulesItem {
   failureDetail?: DeleteFailureDetail;
 }
 
-export type ScanTaskStatus = 'idle' | 'scanning' | 'scan-paused' | 'completed' | 'failed';
+export type ScanTaskStatus =
+  | 'idle'
+  | 'scanning'
+  | 'scan-paused'
+  | 'completed'
+  | 'failed';
 
 export type DeleteTaskStatus =
   | 'deleting'
@@ -121,8 +126,18 @@ export interface DeleteTask {
 
 export type TaskEvent =
   | { type: 'scan:item-found'; item: NodeModulesItem }
-  | { type: 'scan:status'; taskId: string; status: ScanTaskStatus; message?: string }
-  | { type: 'size:updated'; itemId: string; sizeBytes: number; fileCount: number }
+  | {
+      type: 'scan:status';
+      taskId: string;
+      status: ScanTaskStatus;
+      message?: string;
+    }
+  | {
+      type: 'size:updated';
+      itemId: string;
+      sizeBytes: number;
+      fileCount: number;
+    }
   | { type: 'size:failed'; itemId: string; errorMessage: string }
   | {
       type: 'delete:status';

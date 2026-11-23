@@ -32,7 +32,10 @@ export interface ParsedHostsText {
   locations: HostsEntryLocation[];
 }
 
-function splitInlineComment(rawLine: string): { mappingText: string; inlineComment?: string } {
+function splitInlineComment(rawLine: string): {
+  mappingText: string;
+  inlineComment?: string;
+} {
   const commentIndex = rawLine.indexOf('#');
   if (commentIndex < 0) {
     return { mappingText: rawLine.trim() };
@@ -55,7 +58,9 @@ function parseMapping(rawLine: string): ParsedMapping | undefined {
   return { address, hostnames, inlineComment };
 }
 
-function parseEntryLine(rawLine: string): { mapping: ParsedMapping; enabled: boolean } | undefined {
+function parseEntryLine(
+  rawLine: string,
+): { mapping: ParsedMapping; enabled: boolean } | undefined {
   const disabledMatch = rawLine.match(DISABLED_ENTRY_PATTERN);
   if (disabledMatch) {
     const mapping = parseMapping(disabledMatch[1]);
@@ -66,8 +71,13 @@ function parseEntryLine(rawLine: string): { mapping: ParsedMapping; enabled: boo
   return mapping ? { mapping, enabled: true } : undefined;
 }
 
-function joinComments(description?: string, inlineComment?: string): string | undefined {
-  const comments = [description, inlineComment].map((item) => item?.trim()).filter(Boolean);
+function joinComments(
+  description?: string,
+  inlineComment?: string,
+): string | undefined {
+  const comments = [description, inlineComment]
+    .map((item) => item?.trim())
+    .filter(Boolean);
   return comments.length > 0 ? comments.join('；') : undefined;
 }
 
@@ -146,7 +156,9 @@ function normalizeHostname(hostname: string): string {
     normalized.includes('..') ||
     /[\s#*\u0000-\u001f\u007f]/.test(normalized) ||
     !/^[a-z0-9._-]+$/i.test(normalized) ||
-    normalized.split('.').some((label) => label.length === 0 || label.length > 63)
+    normalized
+      .split('.')
+      .some((label) => label.length === 0 || label.length > 63)
   ) {
     throw new Error(`主机名格式不正确：${hostname}`);
   }
@@ -160,7 +172,10 @@ function normalizeComment(comment?: string): string | undefined {
     return undefined;
   }
 
-  if (normalized.length > MAX_COMMENT_LENGTH || /[\r\n\u0000-\u001f\u007f]/.test(normalized)) {
+  if (
+    normalized.length > MAX_COMMENT_LENGTH ||
+    /[\r\n\u0000-\u001f\u007f]/.test(normalized)
+  ) {
     throw new Error(`注释必须为 ${MAX_COMMENT_LENGTH} 个字符以内的单行文本`);
   }
 
@@ -190,7 +205,9 @@ export function validateHostsEntries(entries: HostsEntry[]): HostsEntry[] {
       throw new Error(`IP 地址格式不正确：${entry.address}`);
     }
 
-    const hostnames = Array.from(new Set(entry.hostnames.map(normalizeHostname)));
+    const hostnames = Array.from(
+      new Set(entry.hostnames.map(normalizeHostname)),
+    );
     if (hostnames.length === 0) {
       throw new Error('每条 Hosts 记录至少需要一个主机名');
     }
@@ -199,7 +216,9 @@ export function validateHostsEntries(entries: HostsEntry[]): HostsEntry[] {
       for (const hostname of hostnames) {
         const existingAddress = enabledHostnames.get(hostname);
         if (existingAddress) {
-          throw new Error(`主机名重复：${hostname} 已映射到 ${existingAddress}`);
+          throw new Error(
+            `主机名重复：${hostname} 已映射到 ${existingAddress}`,
+          );
         }
         enabledHostnames.set(hostname, address);
       }
@@ -221,7 +240,9 @@ function entriesEqual(left: HostsEntry, right: HostsEntry): boolean {
     left.enabled === right.enabled &&
     left.comment === right.comment &&
     left.hostnames.length === right.hostnames.length &&
-    left.hostnames.every((hostname, index) => hostname === right.hostnames[index])
+    left.hostnames.every(
+      (hostname, index) => hostname === right.hostnames[index],
+    )
   );
 }
 
@@ -235,10 +256,15 @@ function renderEntry(entry: HostsEntry): string[] {
 /**
  * 将结构化记录写回 Hosts 文本；未改动的原始行保持不变，行尾注释在首次保存时迁移到上方。
  */
-export function renderHostsText(parsed: ParsedHostsText, requestedEntries: HostsEntry[]): string {
+export function renderHostsText(
+  parsed: ParsedHostsText,
+  requestedEntries: HostsEntry[],
+): string {
   const entries = validateHostsEntries(requestedEntries);
   const requestedEntryMap = new Map(entries.map((entry) => [entry.id, entry]));
-  const locationMap = new Map(parsed.locations.map((location) => [location.lineIndex, location]));
+  const locationMap = new Map(
+    parsed.locations.map((location) => [location.lineIndex, location]),
+  );
   const descriptionLineIndexes = new Set(
     parsed.locations
       .map((location) => location.descriptionLineIndex)
@@ -263,7 +289,10 @@ export function renderHostsText(parsed: ParsedHostsText, requestedEntries: Hosts
     }
 
     requestedEntryMap.delete(location.entry.id);
-    if (!location.hasInlineComment && entriesEqual(location.entry, requestedEntry)) {
+    if (
+      !location.hasInlineComment &&
+      entriesEqual(location.entry, requestedEntry)
+    ) {
       if (location.rawDescriptionLine) {
         outputLines.push(location.rawDescriptionLine);
       }
@@ -275,7 +304,11 @@ export function renderHostsText(parsed: ParsedHostsText, requestedEntries: Hosts
   });
 
   const newEntries = entries.filter((entry) => requestedEntryMap.has(entry.id));
-  if (newEntries.length > 0 && outputLines.some((line) => line.trim()) && outputLines.at(-1)?.trim()) {
+  if (
+    newEntries.length > 0 &&
+    outputLines.some((line) => line.trim()) &&
+    outputLines.at(-1)?.trim()
+  ) {
     outputLines.push('');
   }
 
@@ -287,5 +320,7 @@ export function renderHostsText(parsed: ParsedHostsText, requestedEntries: Hosts
   });
 
   const output = outputLines.join(parsed.lineEnding);
-  return parsed.endsWithNewline || newEntries.length > 0 ? `${output}${parsed.lineEnding}` : output;
+  return parsed.endsWithNewline || newEntries.length > 0
+    ? `${output}${parsed.lineEnding}`
+    : output;
 }
